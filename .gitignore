@@ -153,8 +153,15 @@ dmypy.json
 
 # Cython debug symbols
 cython_debug/
+
+# Files to ignore
 data/structures/*
 data/graphs/*
+/data/pdb_files/*
+/data/cif_files/*
+**/.DS_Store
+data/sequences/pickles/*
+
 
 # PyCharm
 #  JetBrains specific template is maintained in a separate JetBrains.gitignore that can
