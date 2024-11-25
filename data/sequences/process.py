@@ -18,13 +18,14 @@ track = True
 non_standard_residues_count = {}
 non_standard_residue_labels = defaultdict(int)
 
-# Load the ESM tokenizer
+# Load the ESM tokenizer 
+# * Change this to your own tokenizer
 model_token = "facebook/esm2_t30_150M_UR50D"
 esm_model = transformers.AutoModelForMaskedLM.from_pretrained(model_token)
 esm_tokenizer = transformers.AutoTokenizer.from_pretrained(model_token)
 
 # Parameters for processing files
-file_type = "pdb"  # Change this to "pdb" or "fasta" to process different file types
+file_type = "cif"  # Change this to "pdb" or "fasta" to process different file types
 cut_num = 10  # swap to len(pdb_files) to process all files
 pkl_file = "smol-sequences.pkl"
 max_seq_len = 1024  # TODO: Maximum sequence length for the tokenizer
@@ -180,8 +181,8 @@ def process_files(file_type, cut_num=10):
     tokenized_sequences = []
 
     for i, file in tqdm(enumerate(files)):
-        if i > cut_num:
-            break
+        # if i > cut_num:
+        #     break
         file_path = os.path.join(directory, file)
         if os.path.isfile(file_path):
             sequence = file_to_seq(file_path, file_type, file_path.endswith(".gz"))
