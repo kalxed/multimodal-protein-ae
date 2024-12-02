@@ -80,24 +80,23 @@ def pdb_to_graph(pdb_path, radius=7):
 
     return data
 
-# Directory containing PDB files
-pdb_directory = "data/structures"
+pdb_directory = "data/raw-structures"
 pdb_files = [
     f
     for f in os.listdir(pdb_directory)
     if f.split('.')[-1] == "cif"
 ]
 total_files = len(pdb_files)
-
-# Process PDB files to create graph data objects
-print(f"Total number of files: {total_files}")
+ntasks = int(os.environ.get("SLURM_ARRAY_TASK_COUNT"))
+task_idx = int(os.environ.get("SLURM_ARRAY_TASK_ID"))
+files_to_process = total_files // ntasks
+first_file = files_to_process * task_idx
+last_file = total_files if task_idx == (ntasks - 1) else (first_file + files_to_process)
 
 res_dir = os.path.join('data', 'graphs')
-if not os.path.exists(res_dir):
-   os.mkdir(res_dir)
-
-idx = 0
-for i, pdb_file in enumerate(pdb_files):
+idx = first_file
+for i in range(first_file, last_file):
+    pdb_file = pdb_files[i]
     pdb_path = os.path.join(pdb_directory, pdb_file)
     data = pdb_to_graph(pdb_path)
     if data is not None:
