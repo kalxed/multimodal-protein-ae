@@ -156,9 +156,10 @@ cython_debug/
 
 # Files to ignore
 data/structures/*
-data/graphs/*
-/data/pdb_files/*
-/data/cif_files/*
+data/pickles/*
+*.pt
+*.pkl
+
 **/.DS_Store
 data/sequences/pickles/*
 
