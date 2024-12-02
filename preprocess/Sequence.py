@@ -17,17 +17,16 @@ non_standard_residues_count = {}
 non_standard_residue_labels = defaultdict(int)
 
 # Load the ESM tokenizer 
-# * Change this to your own tokenizer
 model_token = "facebook/esm2_t30_150M_UR50D"
 esm_model = transformers.AutoModelForMaskedLM.from_pretrained(model_token)
 esm_tokenizer = transformers.AutoTokenizer.from_pretrained(model_token)
 
 # Parameters for processing files
 file_type = "cif"  # Change this to "pdb" or "fasta" to process different file types
+data_directory = f"{data_directory}/{file_type}_files"  # Change this to the directory containing your files
 cut_num = 10  # swap to len(pdb_files) to process all files
 pkl_file = "sequences.pkl"
 max_seq_len = 1024  # TODO: Maximum sequence length for the tokenizer
-
 
 def eval_seq(structure, protein_name):
     """
@@ -164,13 +163,13 @@ def process_files(file_type, cut_num=10):
     """
     match file_type:
         case "pdb":
-            files = [f for f in os.listdir(data_directory) if os.path.splitext(f)[1] == ".pdb"]
+            files = [f for f in os.listdir(data_directory) if os.path.splitext(f)[1] in [".pdb", ".gz"]]
         case "cif":
-            files = [f for f in os.listdir(data_directory) if os.path.splitext(f)[1] == ".cif"]
+            files = [f for f in os.listdir(data_directory) if os.path.splitext(f)[1] in [".cif", ".gz"]]
         case _:
             print("Invalid file type. Please use 'pdb' or 'cif'.")
             return None
-
+        
     tokenized_sequences = []
 
     print("Number of Files: ",len(files))
