@@ -155,12 +155,9 @@ dmypy.json
 cython_debug/
 
 # Files to ignore
-data/structures/*
-data/graphs/*
-/data/pdb_files/*
-/data/cif_files/*
+/data
 **/.DS_Store
-data/sequences/pickles/*
+/log
 
 
 # PyCharm

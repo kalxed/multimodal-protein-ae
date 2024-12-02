@@ -7,14 +7,12 @@ from collections import defaultdict
 
 # Data paths, change these to your own paths
 data_directory = "./data"
-pdb_directory = f"{data_directory}/pdb_files"
-cif_directory = f"{data_directory}/cif_files"
 fasta_path = f"{data_directory}/uniprotkb_AND_reviewed_true_AND_protein.fasta"
-pkl_path = "./data/sequences/pickles"
-save_location = "./data/sequences"
+pkl_path = "./data"
+save_location = "./model"
 
 # Initialize tracking dictionaries
-track = True
+track = False
 non_standard_residues_count = {}
 non_standard_residue_labels = defaultdict(int)
 
@@ -27,7 +25,7 @@ esm_tokenizer = transformers.AutoTokenizer.from_pretrained(model_token)
 # Parameters for processing files
 file_type = "cif"  # Change this to "pdb" or "fasta" to process different file types
 cut_num = 10  # swap to len(pdb_files) to process all files
-pkl_file = "smol-sequences.pkl"
+pkl_file = "sequences.pkl"
 max_seq_len = 1024  # TODO: Maximum sequence length for the tokenizer
 
 
@@ -166,24 +164,21 @@ def process_files(file_type, cut_num=10):
     """
     match file_type:
         case "pdb":
-            directory = pdb_directory
+            files = [f for f in os.listdir(data_directory) if os.path.splitext(f)[1] == ".pdb"]
         case "cif":
-            directory = cif_directory
+            files = [f for f in os.listdir(data_directory) if os.path.splitext(f)[1] == ".cif"]
         case _:
             print("Invalid file type. Please use 'pdb' or 'cif'.")
             return None
 
-    files = [
-        f
-        for f in os.listdir(directory)
-        if os.path.splitext(f)[1].lower() in [".pdb", "cif", ".gz"]
-    ]
     tokenized_sequences = []
+
+    print("Number of Files: ",len(files))
 
     for i, file in tqdm(enumerate(files)):
         # if i > cut_num:
         #     break
-        file_path = os.path.join(directory, file)
+        file_path = os.path.join(data_directory, file)
         if os.path.isfile(file_path):
             sequence = file_to_seq(file_path, file_type, file_path.endswith(".gz"))
         if sequence:
