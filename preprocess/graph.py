@@ -28,33 +28,33 @@ def one_hot_encode_amino_acid(sequence):
 # Function to convert a PDB file to a PyTorch Geometric graph data object
 def pdb_to_graph(pdb_path, radius=7):
     try:
-      structure = parser.get_structure('protein', pdb_path)
+        structure = parser.get_structure('protein', pdb_path)
     except ValueError:
-      print(f"value error encountered when parsing {os.path.basename(pdb_path)}")
-      return None
+        print(f"value error encountered when parsing {os.path.basename(pdb_path)}")
+        return None
     except Exception:
-      print(f"unexpected error encountered when parsing {os.path.basename(pdb_path)}")
-      return None
+        print(f"unexpected error encountered when parsing {os.path.basename(pdb_path)}")
+        return None
 
     node_features = []
     coordinates = []
     sequence = []
 
     for residue in structure.get_residues():
-      if 'CA' in residue:
-        try:
-          aa_code = Polypeptide.three_to_index(residue.get_resname())
-        except KeyError:
-          print(f"unexpected amino acid in {os.path.basename(pdb_path)}, it was {residue.get_resname()}")
-          return None
-        sequence.append(aa_code)
-        coordinates.append(residue['CA'].get_coord())
+        if 'CA' in residue:
+            try:
+                aa_code = Polypeptide.three_to_index(residue.get_resname())
+            except KeyError:
+                print(f"unexpected amino acid in {os.path.basename(pdb_path)}, it was {residue.get_resname()}")
+                return None
+            sequence.append(aa_code)
+            coordinates.append(residue['CA'].get_coord())
     coordinates = np.array(coordinates, dtype=np.float32)
     try:
-      node_features = one_hot_encode_amino_acid(sequence)
+        node_features = one_hot_encode_amino_acid(sequence)
     except IndexError:
-      print(f"unexpected amino acid encountered in {os.path.basename(pdb_path)}")
-      return None
+        print(f"unexpected amino acid encountered in {os.path.basename(pdb_path)}")
+        return None
     x = torch.tensor(node_features, dtype=torch.float32)
     print(f"coords: {coordinates.shape}")
     print(f"x: {x.shape}")
@@ -102,8 +102,8 @@ for i in range(first_file, last_file):
     if data is not None:
         torch.save(data, os.path.join(res_dir, f"data_{idx}.pt"))
         idx += 1
-    if (i + 1) % 1000 == 0:
-        print(f"{i + 1} files processed")
+    if (i + 1 - first_file) % 1000 == 0:
+        print(f"{i + 1 - first_file} files processed")
 
 print("Done")
 
