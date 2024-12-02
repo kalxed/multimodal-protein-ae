@@ -64,7 +64,7 @@ def pdb_to_point_cloud(pdb_path, desired_num_points=2048):
 
 # This directory is relative to where the script is run
 # Directory containing PDB files
-file_directory = "./data"
+file_directory = "./data/"
 pdb_files = [f for f in os.listdir(file_directory) if os.path.splitext(f)[1] == ".pdb"]
 cif_files = [f for f in os.listdir(file_directory) if os.path.splitext(f)[1] == ".cif"]
 print("The Number of files:", len(pdb_files) + len(cif_files))
