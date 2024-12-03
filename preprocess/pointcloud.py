@@ -55,7 +55,7 @@ n = 0
 for i in range(first_file, last_file):
     structure_file = structure_files[i]
     data = structure_file_to_pointcloud(structure_file)
-    if data:
+    if data is not None:
         # get the basename of the file without the extension, get new file path with the .pt extension in result directory
         fname = f"{res_dir}{osp.splitext(osp.basename(structure_file))[0]}.pt" 
         torch.save(data, fname)
