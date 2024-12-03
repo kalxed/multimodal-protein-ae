@@ -1,3 +1,4 @@
+import glob
 import os
 
 import numpy as np
@@ -7,16 +8,13 @@ from Bio.PDB import MMCIFParser
 parser = MMCIFParser(QUIET=True)
 
 # Function to convert a CIF file to a point cloud
-def cif_to_point_cloud(pdb_path, desired_num_points=2048):
+def structure_file_to_pointcloud(pdb_path, desired_num_points=2048):
     try:
         structure = parser.get_structure('protein', pdb_path)
-    except ValueError:
-        print(f"value error encountered when parsing {os.path.basename(pdb_path)}")
-        return None
     except Exception:
-        print(f"unexpected error encountered when parsing {os.path.basename(pdb_path)}")
         return None
-
+    
+    # cap the number of points to add
     coordinates = np.zeros((desired_num_points, 3))
 
     for i, atom in enumerate(structure.get_atoms()):
@@ -34,42 +32,31 @@ def cif_to_point_cloud(pdb_path, desired_num_points=2048):
     return coordinates
 
 # Directory containing PDB files
-file_directory = os.path.join("data", "raw-structures")
+structure_dir = os.path.join("data", "raw-structures", "")
 
-pdb_files = sorted([f for f in os.listdir(file_directory) if os.path.splitext(f)[1] == ".cif"])
+# sort it to ensure that they are correctly divided among the different array tasks
+structure_files = sorted([f for f in glob.glob(f"{structure_dir}*.cif")])
 
-total_files = len(pdb_files)
-print(f"The Number of files: {total_files}")
+total_files = len(structure_files)
 
 ntasks = int(os.environ.get("SLURM_ARRAY_TASK_COUNT", '1'))
-
 task_idx = int(os.environ.get("SLURM_ARRAY_TASK_ID", '0'))
+
+# determine which files to process based on what task number we are
 files_to_process = total_files // ntasks
 first_file = files_to_process * task_idx
 last_file = total_files if task_idx == (ntasks - 1) else (first_file + files_to_process)
+
 res_dir = os.path.join('data', 'pointclouds', '')
 os.makedirs(res_dir, exist_ok=True)
-idx = first_file
 
-fidx = []
-
+# We want to construct a tensor containing the point cloud for each protein, and then save this to a file. 
 for i in range(first_file, last_file):
-    pdb_file = pdb_files[i]
-    cif_path = os.path.join(file_directory, pdb_file)
-    data = cif_to_point_cloud(cif_path)
+    structure_basename = structure_files[i]
+    structure_path = os.path.join(structure_dir, structure_basename)
+    data = structure_file_to_pointcloud(structure_path)
     if data is not None:
-        fidx.append(i)
-        torch.save(data, f"{res_dir}data_{idx}.pt")
-        idx += 1
+        torch.save(data, f"{res_dir}{os.splitext(structure_basename)[0]}.pt")
     if (i + 1 - first_file) % 1000 == 0:
-        print(f"{i + 1 - first_file} CIF files processed")
+        print(f"{i + 1 - first_file} files processed")
 
-mapdir=os.path.join("data", "id-maps", "")
-
-os.makedirs(mapdir, exist_ok=True)
-
-with open(f"{mapdir}pointcloud-{task_idx}.csv", 'w') as f:
-    f.write("uniprot_id,data_idx\n")
-    for i in fidx:
-        f.write(f"{os.path.basename(pdb_files[i]).split('.')[0]},{i}\n")
-print(f"Done.\nCreated {idx} point clouds")

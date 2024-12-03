@@ -1,3 +1,4 @@
+import glob
 import os
 
 import numpy as np
@@ -26,14 +27,10 @@ def one_hot_encode_amino_acid(sequence):
     return one_hot
 
 # Function to convert a PDB file to a PyTorch Geometric graph data object
-def pdb_to_graph(pdb_path, radius=7):
+def structure_file_to_graph(pdb_path, radius=6.0):
     try:
         structure = parser.get_structure('protein', pdb_path)
-    except ValueError:
-        print(f"value error encountered when parsing {os.path.basename(pdb_path)}")
-        return None
     except Exception:
-        print(f"unexpected error encountered when parsing {os.path.basename(pdb_path)}")
         return None
 
     node_features = []
@@ -45,7 +42,7 @@ def pdb_to_graph(pdb_path, radius=7):
             try:
                 aa_code = Polypeptide.three_to_index(residue.get_resname())
             except KeyError:
-                print(f"unexpected amino acid in {os.path.basename(pdb_path)}, it was {residue.get_resname()}")
+                # unexpected amino acid
                 return None
             sequence.append(aa_code)
             coordinates.append(residue['CA'].get_coord())
@@ -53,14 +50,13 @@ def pdb_to_graph(pdb_path, radius=7):
     try:
         node_features = one_hot_encode_amino_acid(sequence)
     except IndexError:
-        print(f"unexpected amino acid encountered in {os.path.basename(pdb_path)}")
+        # unexpected amino acid
         return None
     x = torch.tensor(node_features, dtype=torch.float32)
 
     # Calculate edges based on distance
     edge_index = radius_neighbors_graph(coordinates, radius, mode='connectivity', include_self=False)
-    edge_index = edge_index.tocoo()
-    edge_index = torch.tensor(np.array([edge_index.row, edge_index.col]), dtype=torch.long).contiguous()
+    edge_index = torch.tensor(np.array(edge_index.nonzero()), dtype=torch.long).contiguous()
 
     
     # Generate negative edge samples
@@ -75,48 +71,33 @@ def pdb_to_graph(pdb_path, radius=7):
 
     return data
 
-pdb_directory = os.path.join("data", "raw-structures")
+structure_dir = os.path.join("data", "raw-structures")
 
-pdb_files = sorted([f for f in os.listdir(pdb_directory) if f.split('.')[-1] == "cif"])
+# sort it to ensure that they are correctly divided among the different array tasks
+structure_files = sorted([f for f in glob.glob(f"{structure_dir}*.cif")])
 
-total_files = len(pdb_files)
-ntasks = int(os.environ.get("SLURM_ARRAY_TASK_COUNT"))
-task_idx = int(os.environ.get("SLURM_ARRAY_TASK_ID"))
+total_files = len(structure_files)
+
+ntasks = int(os.environ.get("SLURM_ARRAY_TASK_COUNT", "1"))
+task_idx = int(os.environ.get("SLURM_ARRAY_TASK_ID", "0"))
+
+# determine which files to process based on what task number we are
 files_to_process = total_files // ntasks
 first_file = files_to_process * task_idx
 last_file = total_files if task_idx == (ntasks - 1) else (first_file + files_to_process)
 
 res_dir = os.path.join('data', 'graphs', '')
-
 os.makedirs(res_dir, exist_ok=True)
 
-idx = first_file
-fidx = []
+# We want to construct a pytorch geometric graph object for each protein, and then save this to a file. 
 
 for i in range(first_file, last_file):
-    pdb_file = pdb_files[i]
-    pdb_path = os.path.join(pdb_directory, pdb_file)
-    data = pdb_to_graph(pdb_path)
+    pdb_file = structure_files[i]
+    pdb_path = os.path.join(structure_dir, pdb_file)
+    data = structure_file_to_graph(pdb_path)
     if data is not None:
-        fidx.append(i)        
-        torch.save(data, f"{res_dir}data_{idx}.pt")
-        idx += 1
-
+        torch.save(data, f"{res_dir}{os.splitext(pdb_file)[0]}.pt")
     if (i + 1 - first_file) % 1000 == 0:
         print(f"{i + 1 - first_file} files processed")
-
-mapdir=os.path.join("data", "id-maps", "")
-
-os.makedirs(mapdir, exist_ok=True)
-
-with open(f"{mapdir}graph-{task_idx}.csv", 'w') as f:
-    f.write("uniprot_id,data_idx\n")
-    for i in fidx:
-        f.write(f"{os.path.basename(pdb_files[i]).split('.')[0]},{i}\n")
-
-
-print("Done")
-
-print(f"{idx} graphs successfully created")
 
 
