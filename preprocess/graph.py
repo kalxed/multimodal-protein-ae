@@ -80,12 +80,10 @@ def pdb_to_graph(pdb_path, radius=7):
 
     return data
 
-pdb_directory = "data/raw-structures"
-pdb_files = [
-    f
-    for f in os.listdir(pdb_directory)
-    if f.split('.')[-1] == "cif"
-]
+pdb_directory = os.path.join("data", "raw-structures")
+
+pdb_files = sorted([f for f in os.listdir(pdb_directory) if f.split('.')[-1] == "cif"])
+
 total_files = len(pdb_files)
 ntasks = int(os.environ.get("SLURM_ARRAY_TASK_COUNT"))
 task_idx = int(os.environ.get("SLURM_ARRAY_TASK_ID"))
@@ -95,15 +93,25 @@ last_file = total_files if task_idx == (ntasks - 1) else (first_file + files_to_
 
 res_dir = os.path.join('data', 'graphs')
 idx = first_file
+fidx = []
+
 for i in range(first_file, last_file):
     pdb_file = pdb_files[i]
     pdb_path = os.path.join(pdb_directory, pdb_file)
     data = pdb_to_graph(pdb_path)
     if data is not None:
+        fidx.append(i)        
         torch.save(data, os.path.join(res_dir, f"data_{idx}.pt"))
         idx += 1
+
     if (i + 1 - first_file) % 1000 == 0:
         print(f"{i + 1 - first_file} files processed")
+
+with open("data/id-maps/graph.csv", 'w') as f:
+    f.write("uniprot_id,data_idx\n")
+    for i in fidx:
+        f.write(f"{os.path.basename(pdb_files[i]).split('.')[0]},{i}\n")
+
 
 print("Done")
 
