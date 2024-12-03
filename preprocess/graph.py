@@ -57,7 +57,6 @@ def structure_file_to_graph(pdb_path, radius=6.0):
     # Calculate edges based on distance
     edge_index = radius_neighbors_graph(coordinates, radius, mode='connectivity', include_self=False)
     edge_index = torch.tensor(np.array(edge_index.nonzero()), dtype=torch.long).contiguous()
-
     
     # Generate negative edge samples
     neg_edge_index = negative_sampling(
@@ -92,11 +91,11 @@ os.makedirs(res_dir, exist_ok=True)
 # We want to construct a pytorch geometric graph object for each protein, and then save this to a file. 
 
 for i in range(first_file, last_file):
-    pdb_file = structure_files[i]
-    pdb_path = os.path.join(structure_dir, pdb_file)
-    data = structure_file_to_graph(pdb_path)
+    structure_file = structure_files[i]
+    structure_path = os.path.join(structure_dir, structure_file)
+    data = structure_file_to_graph(structure_path)
     if data:
-        torch.save(data, f"{res_dir}{os.splitext(pdb_file)[0]}.pt")
+        torch.save(data, f"{res_dir}{os.splitext(structure_file)[0]}.pt")
     if (i + 1 - first_file) % 1000 == 0:
         print(f"{i + 1 - first_file} files processed")
 

@@ -52,11 +52,11 @@ os.makedirs(res_dir, exist_ok=True)
 
 # We want to construct a tensor containing the point cloud for each protein, and then save this to a file. 
 for i in range(first_file, last_file):
-    structure_basename = structure_files[i]
-    structure_path = os.path.join(structure_dir, structure_basename)
+    structure_file = structure_files[i]
+    structure_path = os.path.join(structure_dir, structure_file)
     data = structure_file_to_pointcloud(structure_path)
     if data:
-        torch.save(data, f"{res_dir}{os.splitext(structure_basename)[0]}.pt")
+        torch.save(data, f"{res_dir}{os.splitext(structure_file)[0]}.pt")
     if (i + 1 - first_file) % 1000 == 0:
         print(f"{i + 1 - first_file} files processed")
 
