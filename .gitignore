@@ -155,8 +155,7 @@ dmypy.json
 cython_debug/
 
 # Files to ignore
-data/structures/*
-data/pickles/*
+data/*
 *.pt
 *.pkl
 
