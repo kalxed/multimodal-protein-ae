@@ -121,6 +121,6 @@ def process_files(structure_files: list[str], res_dir:str, parser=PDBParser(QUIE
             print(f"\n{i + 1} files processed")
     return n
 
-n = process_files(structure_files[first_file:last_file], "res_dir", parser=parser)
+n = process_files(structure_files[first_file:last_file], res_dir, parser=parser)
 
 print(f"Done. made {n} succesful tokenized sequences")
