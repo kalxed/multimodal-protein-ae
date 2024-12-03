@@ -8,9 +8,6 @@ import transformers
 from Bio import SeqIO
 from Bio.PDB import MMCIFParser, PDBParser, Polypeptide
 
-# Data paths, change these to your own paths
-structure_dir = "data/raw-structures"
-pkl_path = "./data"
 
 # Load the ESM tokenizer 
 # * Change this to your own tokenizer
@@ -18,11 +15,26 @@ model_token = "facebook/esm2_t30_150M_UR50D"
 esm_model = transformers.AutoModelForMaskedLM.from_pretrained(model_token)
 esm_tokenizer = transformers.AutoTokenizer.from_pretrained(model_token)
 
-# Parameters for processing files
-file_type = "cif"  # Change this to "pdb" or "fasta" to process different file types
-cut_num = 10  # swap to len(pdb_files) to process all files
-pkl_file = "sequences.pkl"
-max_seq_len = 1024  # TODO: Maximum sequence length for the tokenizer
+# Data paths, change these to your own paths
+structure_dir = "data/raw-structures"
+
+res_dir = osp.join('data', 'sequences', '')
+
+os.makedirs(res_dir, exist_ok=True)
+
+parser = MMCIFParser(QUIET=True)
+
+structure_files = sorted([f for f in glob.glob(f"{structure_dir}/*.cif")])
+
+ntasks = int(os.environ.get("SLURM_ARRAY_TASK_COUNT", "1"))
+task_idx = int(os.environ.get("SLURM_ARRAY_TASK_ID", "0"))
+
+total_files = len(structure_files)
+
+# determine which files to process based on what task number we are
+files_to_process = total_files // ntasks
+first_file = files_to_process * task_idx
+last_file = total_files if task_idx == (ntasks - 1) else (first_file + files_to_process)
 
 
 def eval_seq(structure_path: str, parser):
@@ -108,24 +120,6 @@ def process_files(structure_files: list[str], res_dir:str, parser=PDBParser(QUIE
         if (i + 1) % 1000 == 0:
             print(f"\n{i + 1} files processed")
     return n
-
-parser = MMCIFParser(QUIET=True)
-
-structure_files = sorted([f for f in glob.glob(f"{structure_dir}/*.cif")])
-
-ntasks = int(os.environ.get("SLURM_ARRAY_TASK_COUNT", "1"))
-task_idx = int(os.environ.get("SLURM_ARRAY_TASK_ID", "0"))
-
-total_files = len(structure_files)
-
-# determine which files to process based on what task number we are
-
-files_to_process = total_files // ntasks
-first_file = files_to_process * task_idx
-last_file = total_files if task_idx == (ntasks - 1) else (first_file + files_to_process)
-
-res_dir = osp.join('data', 'sequences', '')
-os.makedirs(res_dir, exist_ok=True)
 
 n = process_files(structure_files[first_file:last_file], "res_dir", parser=parser)
 
