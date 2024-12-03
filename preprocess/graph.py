@@ -100,4 +100,4 @@ for i in range(first_file, last_file):
     if (i + 1 - first_file) % 1000 == 0:
         print(f"{i + 1 - first_file} files processed")
 
-print(f"done. processed {n} files")
+print(f"done. made {n} total graphs")
