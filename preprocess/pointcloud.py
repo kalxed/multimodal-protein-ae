@@ -48,6 +48,7 @@ files_to_process = total_files // ntasks
 first_file = files_to_process * task_idx
 last_file = total_files if task_idx == (ntasks - 1) else (first_file + files_to_process)
 res_dir = os.path.join('data', 'pointclouds', '')
+os.makedirs(res_dir, exist_ok=True)
 idx = first_file
 
 fidx = []

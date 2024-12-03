@@ -86,7 +86,10 @@ files_to_process = total_files // ntasks
 first_file = files_to_process * task_idx
 last_file = total_files if task_idx == (ntasks - 1) else (first_file + files_to_process)
 
-res_dir = os.path.join('data', 'graphs')
+res_dir = os.path.join('data', 'graphs', '')
+
+os.makedirs(res_dir, exist_ok=True)
+
 idx = first_file
 fidx = []
 
@@ -96,7 +99,7 @@ for i in range(first_file, last_file):
     data = pdb_to_graph(pdb_path)
     if data is not None:
         fidx.append(i)        
-        torch.save(data, os.path.join(res_dir, f"data_{idx}.pt"))
+        torch.save(data, f"{res_dir}data_{idx}.pt")
         idx += 1
 
     if (i + 1 - first_file) % 1000 == 0:
