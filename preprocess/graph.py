@@ -95,7 +95,7 @@ for i in range(first_file, last_file):
     pdb_file = structure_files[i]
     pdb_path = os.path.join(structure_dir, pdb_file)
     data = structure_file_to_graph(pdb_path)
-    if data is not None:
+    if data:
         torch.save(data, f"{res_dir}{os.splitext(pdb_file)[0]}.pt")
     if (i + 1 - first_file) % 1000 == 0:
         print(f"{i + 1 - first_file} files processed")

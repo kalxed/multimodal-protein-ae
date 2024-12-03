@@ -55,7 +55,7 @@ for i in range(first_file, last_file):
     structure_basename = structure_files[i]
     structure_path = os.path.join(structure_dir, structure_basename)
     data = structure_file_to_pointcloud(structure_path)
-    if data is not None:
+    if data:
         torch.save(data, f"{res_dir}{os.splitext(structure_basename)[0]}.pt")
     if (i + 1 - first_file) % 1000 == 0:
         print(f"{i + 1 - first_file} files processed")
