@@ -56,14 +56,9 @@ def pdb_to_graph(pdb_path, radius=7):
         print(f"unexpected amino acid encountered in {os.path.basename(pdb_path)}")
         return None
     x = torch.tensor(node_features, dtype=torch.float32)
-    print(f"coords: {coordinates.shape}")
-    print(f"x: {x.shape}")
 
     # Calculate edges based on distance
     edge_index = radius_neighbors_graph(coordinates, radius, mode='connectivity', include_self=False)
-    print(f"edge: {edge_index.shape}")
-    print(f"coo edge: {edge_index.tocoo().shape}")
-    # edge_index = np.array(edge_index.nonzero())
     edge_index = edge_index.tocoo()
     edge_index = torch.tensor(np.array([edge_index.row, edge_index.col]), dtype=torch.long).contiguous()
 
