@@ -105,7 +105,11 @@ for i in range(first_file, last_file):
     if (i + 1 - first_file) % 1000 == 0:
         print(f"{i + 1 - first_file} files processed")
 
-with open("data/id-maps/graph.csv", 'w') as f:
+mapdir=os.path.join("data", "id-maps", "")
+
+os.makedirs(mapdir, exist_ok=True)
+
+with open(f"{mapdir}graph-{task_idx}.csv", 'w') as f:
     f.write("uniprot_id,data_idx\n")
     for i in fidx:
         f.write(f"{os.path.basename(pdb_files[i]).split('.')[0]},{i}\n")
