@@ -13,7 +13,7 @@ parser = MMCIFParser(QUIET=True)
 ppb = PPBuilder()
 
 # Define the standard amino acids and create a LabelEncoder for encoding them
-amino_acids = list(range(0, 21))
+amino_acids = list(range(21))
 label_encoder = LabelEncoder()
 label_encoder.fit(amino_acids)
 num_amino_acids = len(amino_acids)
