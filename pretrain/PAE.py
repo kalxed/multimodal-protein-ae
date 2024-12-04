@@ -178,10 +178,11 @@ def main():
 
     if args.mode == "train":
         # Training mode
-        for epoch in range(num_epochs):
+        for epoch in range(1, num_epochs + 1):
             train_loss = train(pae_model, train_loader, optimizer, device) 
-            val_loss = validation(pae_model, val_loader, device)
-            print(f"Epoch [{epoch + 1}/{num_epochs}] Train Loss: {train_loss:.4f} - Validation Loss: {val_loss:.4f}")
+            if epoch % 5 == 0:
+                val_loss = validation(pae_model, val_loader, device)
+                print(f'Epoch [{epoch}/{num_epochs}], Train Loss: {train_loss:.4f}, Valid Loss: {val_loss:.4f}')
 
         # Save the PAE model
         torch.save(pae_model, model_path)
