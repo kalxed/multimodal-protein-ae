@@ -160,7 +160,7 @@ data/*
 *.pkl
 
 **/.DS_Store
-data/sequences/pickles/*
+/log
 
 
 # PyCharm
