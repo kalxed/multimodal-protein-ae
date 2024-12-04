@@ -153,8 +153,12 @@ dmypy.json
 
 # Cython debug symbols
 cython_debug/
+
+# Files to ignore
 data/*
 *.pt
+*.pkl
+
 **/.DS_Store
 /log
 

@@ -5,6 +5,7 @@ warnings.filterwarnings("ignore")
 
 import pickle
 import math
+import glob
 
 from torch_geometric.data import DataLoader
 import torch.optim as optim
@@ -36,9 +37,8 @@ class PointClouds(Dataset):
         return self.dataset[i]
 
 # Load the point cloud data
-with open('./data/pointclouds.pkl', 'rb') as f:
-    print("Loading data ...")
-    dataset = pickle.load(f)
+# Implement the new loading scheme here
+
 print("Data loaded successfully.")
 
 # Create instances of the custom dataset class for train, validation, and test sets
