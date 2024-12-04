@@ -44,7 +44,7 @@ def structure_file_to_graph(pdb_path, radius=6.0):
                 aa_code = Polypeptide.three_to_index(residue.get_resname())
             except KeyError:
                 # unexpected amino acid
-                continue
+                return None
             sequence.append(aa_code)
             coordinates.append(residue['CA'].get_coord())
     coordinates = np.array(coordinates, dtype=np.float32)
@@ -56,7 +56,7 @@ def structure_file_to_graph(pdb_path, radius=6.0):
     x = torch.tensor(node_features, dtype=torch.float32)
 
     # Calculate edges based on distance
-    edge_index = radius_neighbors_graph(coordinates, radius, mode='connectivity', include_self=False)
+    edge_index = radius_neighbors_graph(coordinates, radius, mode='connectivity', include_self='auto')
     edge_index = torch.tensor(np.array(edge_index.nonzero()), dtype=torch.long).contiguous()
     
     # Generate negative edge samples
@@ -71,7 +71,7 @@ def structure_file_to_graph(pdb_path, radius=6.0):
 
     return data
 
-structure_dir = osp.join("data", "cif_files", "") # MODIFY THIS PATH TO YOUR OWN DIRECTORY
+structure_dir = osp.join("data", "raw-structures", "")
 
 # sort it to ensure that they are correctly divided among the different array tasks
 structure_files = sorted([f for f in glob.glob(f"{structure_dir}*.cif")])

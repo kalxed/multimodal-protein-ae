@@ -61,7 +61,7 @@ def eval_seq(structure_path: str, parser):
             except KeyError:
                 # continue
                 # opting to drop the protein since that is what the graphs do.
-                continue
+                return None
     return sequence
 
 

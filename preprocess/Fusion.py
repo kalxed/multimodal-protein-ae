@@ -10,7 +10,7 @@ import torch.nn as nn
 from tqdm import tqdm
 sys.path.append(".")
 from model.ESM import *
-from model.VGAE import *
+from model.vgae import *
 from model.PAE import *
 from model.Attention import AttentionFusion
 from model.Concrete_Autoencoder import ConcreteAutoencoder
@@ -61,10 +61,6 @@ def process(device):
     pointcloud_files = sorted(os.listdir(pointcloud_dir))
     sequence_files = sorted(os.listdir(sequence_dir))
 
-    # Ensure the data directories have the same number of files
-    assert len(graph_files) == len(pointcloud_files) == len(sequence_files), \
-        "Mismatch in the number of files across modalities!"
-
     modality_dim = 640  # Dimension of each modality
     shared_dim = modality_dim * 3
     processed_data_list = []
@@ -74,12 +70,13 @@ def process(device):
         total=len(sequence_files),
         desc="Processing modalities"
     ):
+        # Add check to confirm file names match
+        assert graph_file.split(".")[0] == pointcloud_file.split(".")[0] == sequence_file.split(".")[0]
+        
         # Load graph, point cloud, and sequence data
         graph = torch.load(os.path.join(graph_dir, graph_file), weights_only=False)
         point_cloud = torch.load(os.path.join(pointcloud_dir, pointcloud_file), weights_only=False)
         sequence = torch.load(os.path.join(sequence_dir, sequence_file), weights_only=False)
-        
-        print(f'Graph shape: {graph.x.shape}, Point Cloud shape: {point_cloud.shape}, Sequence shape: {sequence.shape}')
 
         # Encode sequence data using ESM
         with torch.no_grad():
@@ -126,13 +123,8 @@ def process(device):
 
         processed_data_list.append(fused_data)
 
-    print("Attention Fusion Completed Successfully.")
-
-    # Print the shapes of the encoded data
-    print("Fused Data Shape: ", fused_data.shape)
-
     # Save the processed fused data
-    with open("./data/sequences/pickles/fusion.pkl", "wb") as f:
+    with open("./data/pickles/fusion.pkl", "wb") as f:
         pickle.dump(processed_data_list, f)
 
 # * The following code is a placeholder for original process function
@@ -223,7 +215,7 @@ def process(device):
         
 def load_data():
     # Load the preprocessed data
-    with open("./data/sequences/pickles/fusion.pkl", "rb") as f:
+    with open("./data/pickles/fusion.pkl", "rb") as f:
         print("Loading data ...")
         dataset = pickle.load(f)
     print("Data loaded successfully.")    
