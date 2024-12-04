@@ -51,6 +51,7 @@ def process(device):
     esm_model = esm_model.to(device)
     print("Pre-trained models loaded successfully.")
 
+    # Change the loading of preprocessed data to match the new data
     with open(f"./data/sequences/pickles/graphs.pkl", "rb") as f:
         print("Loading graph data ...")
         graph_data = pickle.load(f)
