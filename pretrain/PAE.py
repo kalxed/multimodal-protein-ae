@@ -9,9 +9,8 @@ import glob
 
 from torch_geometric.data import DataLoader
 import torch.optim as optim
-from torch.utils.data import Dataset
 
-from tensorboardX import SummaryWriter
+import os.path as osp
 
 import os
 import sys
@@ -19,54 +18,7 @@ sys.path.append(".")
 
 from model.PAE import *
 
-script_directory = os.path.dirname(os.path.abspath(__file__))
-PATH = f"{script_directory}/../model/PAE.pt"
-
-# Create a summary writer for logging
-writer = SummaryWriter(log_dir="./log/PAE")
-
-# Define a custom dataset class for handling point cloud data
-class PointClouds(Dataset):
-    def __init__(self, dataset):
-        self.dataset = dataset
-
-    def __len__(self):
-        return len(self.dataset)
-
-    def __getitem__(self, i):
-        return self.dataset[i]
-
-# Load the point cloud data
-# Implement the new loading scheme here
-
-print("Data loaded successfully.")
-
-# Create instances of the custom dataset class for train, validation, and test sets
-dataset = PointClouds(dataset)
-
-# Split the dataset into train, validation, and test sets
-train_ratio = 0.7
-valid_ratio = 0.1
-test_ratio = 0.2
-
-train_size = int(len(dataset) * train_ratio)
-valid_size = int(len(dataset) * valid_ratio)
-test_size = len(dataset) - train_size - valid_size
-
-print("Train dataset size:", train_size)
-print("Validation dataset size:", valid_size)
-print("Test dataset size:", test_size)
-
-train_dataset, valid_dataset, test_dataset = torch.utils.data.random_split(
-    dataset, [train_size, valid_size, test_size]
-)
-
-batch_size = 256
-
-# Create data loaders for train, validation, and test sets
-train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
-valid_loader = DataLoader(valid_dataset, batch_size=batch_size, shuffle=False)
-test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
+from datasets import SingleModeDataset
 
 # Define a custom Chamfer Distance loss function
 class ChamferDistance(nn.Module):
@@ -144,6 +96,7 @@ def train(pae_model, train_loader, optimizer, device):
     return average_loss
 
 # Validation function
+@torch.no_grad
 def validation(pae_model, valid_loader, device):
     pae_model.eval()
     total_val_loss = 0.0
@@ -162,6 +115,7 @@ def validation(pae_model, valid_loader, device):
     return average_val_loss
 
 # Testing function
+@torch.no_grad
 def test(pae_model, test_loader, device):
     pae_model.eval()
     total_test_loss = 0.0
@@ -182,33 +136,63 @@ def test(pae_model, test_loader, device):
 def main():
     parser = argparse.ArgumentParser(description="Point Cloud Auto-Encoder (PAE)")
     parser.add_argument("--mode", choices=["train", "test"], help="Select mode: train or test", required=True)
+    parser.add_argument("--model-path", default="model.pt", type=str,dest="model_path",
+                        help="where store the trained model, or where to load the model from for testing")
+    parser.add_argument("--id-file", default="proteins", help="file containing all the protein ids",type=str, dest="id_file")
+    parser.add_argument("--data-dir", default="data/pointclouds",help = "directory containing the pointcloud files", type=str, dest="data_dir")
+    parser.add_argument("--epochs", default=100, help="number of epochs to train for. only applicable when mode=train", type=int)
+    parser.add_argument("--batch-size", default=256, help="batch size for training", type=int, dest="batch_size")
+
     args = parser.parse_args()
+    model_path = args.model_path
+    pointcloud_dir = args.data_dir
+    id_file = args.id_file
+
+    num_epochs = args.epochs
+    batch_size = args.batch_size
     # Define the dimension of the representation vector and the number of points
     k = 640
     num_points = 2048
+
+    with open(id_file, "r") as f:
+        fnames = [osp.join(pointcloud_dir, fname.strip()) for fname in f.readlines()]
+    dataset = SingleModeDataset(fnames=fnames)
+    # Split the dataset into train, validation, and test sets
+    train_ratio = 0.7
+    val = 0.1
+    test_ratio = 0.2
+
+    train_set, val_set, test_set = torch.utils.data.random_split(dataset, [train_ratio, val, test_ratio], torch.Generator().manual_seed(1234))
+
+    # Create data loaders for train, validation, and test sets
+    train_loader = DataLoader(train_set, batch_size=batch_size, shuffle=True)
+    val_loader = DataLoader(val_set, batch_size=batch_size, shuffle=False)
+    test_loader = DataLoader(test_set, batch_size=batch_size, shuffle=False)
+
     pae_model = PointAutoencoder(k, num_points)
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
+    device = torch.device("cuda" if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu")
+    print(f"using device {device}")
+
     pae_model = pae_model.to(device)
+
     optimizer = optim.Adam(pae_model.parameters(), lr=0.001)
 
-    num_epochs = 100
     if args.mode == "train":
         # Training mode
         for epoch in range(num_epochs):
             train_loss = train(pae_model, train_loader, optimizer, device) 
-            val_loss = validation(pae_model, valid_loader, device)
-            writer.add_scalar('Loss/train', train_loss, epoch)
-            writer.add_scalar('Loss/valid', val_loss, epoch)
+            val_loss = validation(pae_model, val_loader, device)
             print(f"Epoch [{epoch + 1}/{num_epochs}] Train Loss: {train_loss:.4f} - Validation Loss: {val_loss:.4f}")
 
         # Save the PAE model
-        torch.save(pae_model, PATH)
+        torch.save(pae_model, model_path)
         print("Model saved")
 
     elif args.mode == "test":
         # Test mode
         # Load the saved model
-        pae_model = torch.load(PATH)
+        pae_model = torch.load(model_path, weights_only=True)
         # Evaluate the model on the test dataset
         test_loss = test(pae_model, test_loader, device)
         print(f"Average Chamfer Distance on Test Set: {test_loss:.4f}")
