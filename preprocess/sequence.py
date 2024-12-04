@@ -2,12 +2,10 @@ import glob
 import gzip
 import os
 import os.path as osp
-
 import torch
 import transformers
 from Bio import SeqIO
 from Bio.PDB import MMCIFParser, PDBParser, Polypeptide
-
 
 # Load the ESM tokenizer 
 # * Change this to your own tokenizer
