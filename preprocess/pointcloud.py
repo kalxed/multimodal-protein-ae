@@ -5,6 +5,7 @@ import os.path as osp
 import numpy as np
 import torch
 from Bio.PDB import MMCIFParser
+from tqdm import tqdm
 
 parser = MMCIFParser(QUIET=True)
 
@@ -52,7 +53,7 @@ os.makedirs(res_dir, exist_ok=True)
 
 # We want to construct a pytorch geometric graph object for each protein, and then save this to a file. 
 n = 0
-for i in range(first_file, last_file):
+for i in tqdm(range(first_file, last_file), desc="Processing files"):
     structure_file = structure_files[i]
     data = structure_file_to_pointcloud(structure_file)
     if data is not None:

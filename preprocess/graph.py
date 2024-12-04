@@ -9,6 +9,7 @@ from sklearn.neighbors import radius_neighbors_graph
 from sklearn.preprocessing import LabelEncoder
 from torch_geometric.data import Data
 from torch_geometric.utils import negative_sampling
+from tqdm import tqdm
 
 # Initialize a PDB parser and PPBuilder for protein structure parsing
 parser = MMCIFParser(QUIET=True)
@@ -43,7 +44,7 @@ def structure_file_to_graph(pdb_path, radius=6.0):
                 aa_code = Polypeptide.three_to_index(residue.get_resname())
             except KeyError:
                 # unexpected amino acid
-                return None
+                continue
             sequence.append(aa_code)
             coordinates.append(residue['CA'].get_coord())
     coordinates = np.array(coordinates, dtype=np.float32)
@@ -70,7 +71,7 @@ def structure_file_to_graph(pdb_path, radius=6.0):
 
     return data
 
-structure_dir = osp.join("data", "raw-structures", "")
+structure_dir = osp.join("data", "cif_files", "") # MODIFY THIS PATH TO YOUR OWN DIRECTORY
 
 # sort it to ensure that they are correctly divided among the different array tasks
 structure_files = sorted([f for f in glob.glob(f"{structure_dir}*.cif")])
@@ -89,7 +90,7 @@ os.makedirs(res_dir, exist_ok=True)
 
 # We want to construct a pytorch geometric graph object for each protein, and then save this to a file. 
 n = 0
-for i in range(first_file, last_file):
+for i in tqdm(range(first_file, last_file), desc="Processing files"):
     structure_file = structure_files[i]
     data = structure_file_to_graph(structure_file)
     if data is not None:
