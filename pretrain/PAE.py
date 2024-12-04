@@ -3,17 +3,15 @@ import warnings
 # Disable DeepSNAP warnings for clearer printout in the tutorial
 warnings.filterwarnings("ignore")
 
-import pickle
 import math
-import glob
 
 from torch_geometric.data import DataLoader
 import torch.optim as optim
 
 import os.path as osp
 
-import os
 import sys
+
 sys.path.append(".")
 
 from model.PAE import *
@@ -141,7 +139,7 @@ def main():
     parser.add_argument("--id-file", default="proteins", help="file containing all the protein ids",type=str, dest="id_file")
     parser.add_argument("--data-dir", default="data/pointclouds",help = "directory containing the pointcloud files", type=str, dest="data_dir")
     parser.add_argument("--epochs", default=100, help="number of epochs to train for. only applicable when mode=train", type=int)
-    parser.add_argument("--batch-size", default=256, help="batch size for training", type=int, dest="batch_size")
+    parser.add_argument("--batch-size", default=128, help="batch size for training", type=int, dest="batch_size")
 
     args = parser.parse_args()
     model_path = args.model_path
