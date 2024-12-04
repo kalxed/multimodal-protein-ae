@@ -22,9 +22,6 @@ from model.PAE import *
 script_directory = os.path.dirname(os.path.abspath(__file__))
 PATH = f"{script_directory}/../model/PAE.pt"
 
-# Create a summary writer for logging
-writer = SummaryWriter(log_dir="./log/PAE")
-
 # Define a custom dataset class for handling point cloud data
 class PointClouds(Dataset):
     def __init__(self, dataset):
@@ -36,10 +33,15 @@ class PointClouds(Dataset):
     def __getitem__(self, i):
         return self.dataset[i]
 
-# Load the point cloud data
-# Implement the new loading scheme here
+# Load the point cloud data from .pt files
+pointcloud_files = glob.glob('./data/pointclouds/*.pt')
+dataset = []
 
-print("Data loaded successfully.")
+for file in pointcloud_files:
+    data = torch.load(file)
+    dataset.append(data)
+
+print(f"Loaded {len(dataset)} point cloud files.")
 
 # Create instances of the custom dataset class for train, validation, and test sets
 dataset = PointClouds(dataset)
@@ -61,7 +63,7 @@ train_dataset, valid_dataset, test_dataset = torch.utils.data.random_split(
     dataset, [train_size, valid_size, test_size]
 )
 
-batch_size = 256
+batch_size = 8
 
 # Create data loaders for train, validation, and test sets
 train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
@@ -183,6 +185,7 @@ def main():
     parser = argparse.ArgumentParser(description="Point Cloud Auto-Encoder (PAE)")
     parser.add_argument("--mode", choices=["train", "test"], help="Select mode: train or test", required=True)
     args = parser.parse_args()
+    
     # Define the dimension of the representation vector and the number of points
     k = 640
     num_points = 2048
@@ -191,14 +194,12 @@ def main():
     pae_model = pae_model.to(device)
     optimizer = optim.Adam(pae_model.parameters(), lr=0.001)
 
-    num_epochs = 100
+    num_epochs = 50
     if args.mode == "train":
         # Training mode
         for epoch in range(num_epochs):
             train_loss = train(pae_model, train_loader, optimizer, device) 
             val_loss = validation(pae_model, valid_loader, device)
-            writer.add_scalar('Loss/train', train_loss, epoch)
-            writer.add_scalar('Loss/valid', val_loss, epoch)
             print(f"Epoch [{epoch + 1}/{num_epochs}] Train Loss: {train_loss:.4f} - Validation Loss: {val_loss:.4f}")
 
         # Save the PAE model
