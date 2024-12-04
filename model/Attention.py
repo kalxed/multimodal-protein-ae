@@ -11,6 +11,9 @@ class AttentionFusion(nn.Module):
         })
         self.attention = nn.MultiheadAttention(embed_dim=shared_dim, num_heads=4)
         self.fc_out = nn.Linear(shared_dim, shared_dim)
+        
+        # Add a final layer to decode to the concatenated space
+        self.decode_to_original = nn.Linear(shared_dim, sum(input_dims.values()))  
 
     def forward(self, sequence, graph, point_cloud):
         # Project all inputs to shared_dim
@@ -22,9 +25,15 @@ class AttentionFusion(nn.Module):
         tokens = torch.stack([seq_proj, graph_proj, pc_proj], dim=0)  # Shape: (3, batch_size, shared_dim)
 
         # Compute attention
-        attn_output, _ = self.attention(tokens, tokens, tokens)  # Shape: (3, batch_size, shared_dim)
+        attn_output, attn_weights = self.attention(tokens, tokens, tokens)  # Shape: (3, batch_size, shared_dim)
 
         # Aggregate modalities and produce fused output
         fusion = attn_output.mean(dim=0)  # Average over modalities
         fusion = self.fc_out(fusion)
-        return fusion
+        return fusion, attn_weights
+
+    def encode(self, sequence, graph, point_cloud):
+        return self.forward(sequence, graph, point_cloud)
+
+    def decode(self, fused_representation):
+        return self.decode_to_original(fused_representation)
