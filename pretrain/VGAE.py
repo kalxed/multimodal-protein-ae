@@ -89,7 +89,7 @@ def main():
         fnames = [osp.join(graph_dir, fname.strip()) for fname in f.readlines()]
 
     graph_ds = SingleModeDataset(fnames=fnames)
-    train_set, val_set, test_set = random_split(graph_ds, [0.0, 0.0, 1.0 ], torch.Generator().manual_seed(1234))
+    train_set, val_set, test_set = random_split(graph_ds, [0.7, 0.1, 0.2], torch.Generator().manual_seed(1234))
 
     # Create data loaders for train, test, and validation sets
     train_loader = DataLoader(train_set, batch_size=batch_size, shuffle=True, pin_memory=True)
