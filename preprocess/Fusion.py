@@ -12,6 +12,7 @@ sys.path.append(".")
 from model.ESM import *
 from model.vgae import *
 from model.PAE import *
+import glob
 from model.Attention import AttentionFusion
 from model.Concrete_Autoencoder import ConcreteAutoencoder
 
@@ -28,9 +29,13 @@ class MultimodalDataset(Dataset):
     
 # Concrete autoencoder parameters
 input_dim = 640 * 3  # Input dimension after fusion
+modality_dim = 640  # Dimension of each modality
 shared_dim = 640  # Shared dimension after fusion
 latent_dim = 64  # Latent space size
 temperature = .5  # Concrete distribution temperature
+
+# Input dimensions for the AttentionFusion model
+input_dims = {"sequence": modality_dim, "graph": modality_dim, "point_cloud": modality_dim}  # Input feature dims for each modality
     
 # Function for Z-score standardization
 def z_score_standardization(tensor):
@@ -61,7 +66,6 @@ def process(device):
     pointcloud_files = sorted(os.listdir(pointcloud_dir))
     sequence_files = sorted(os.listdir(sequence_dir))
 
-    modality_dim = 640  # Dimension of each modality
     shared_dim = modality_dim * 3
     processed_data_list = []
 
@@ -98,128 +102,47 @@ def process(device):
             point_cloud = point_cloud.to(device)
             encoded_point_cloud = pae_model.encode(point_cloud[None, :]).squeeze().to("cpu")
             encoded_point_cloud = z_score_standardization(encoded_point_cloud)
-
-        # Define Linear Projections for each modality
-        sequence_proj = nn.Linear(encoded_sequence.shape[-1], modality_dim).to(device)
-        graph_proj = nn.Linear(encoded_graph.shape[-1], modality_dim).to(device)
-        point_cloud_proj = nn.Linear(encoded_point_cloud.shape[-1], modality_dim).to(device)
-
-        # Apply Linear Projections
-        projected_sequence = sequence_proj(encoded_sequence)
-        projected_graph = graph_proj(encoded_graph)
-        projected_point_cloud = point_cloud_proj(encoded_point_cloud)
-
-        attention_fusion = AttentionFusion(
-            input_dims={"sequence": modality_dim, "graph": modality_dim, "point_cloud": modality_dim},
-            shared_dim=shared_dim
-        ).to(device)
-
-        # Perform attention-based fusion using learned projections
-        fused_data = attention_fusion(
-            projected_sequence.to(device),
-            projected_graph.to(device),
-            projected_point_cloud.to(device),
-        ).to("cpu")
-
-        processed_data_list.append(fused_data)
-
-    # Save the processed fused data
-    with open("./data/pickles/fusion.pkl", "wb") as f:
-        pickle.dump(processed_data_list, f)
-
-# * The following code is a placeholder for original process function
-# def process(device):
-#     os.path.dirname(os.path.abspath(__file__))
-#     vgae_model = torch.load(f"./data/models/VGAE.pt", map_location=device, weights_only=True)
-#     pae_model = torch.load(f"./data/models/PAE.pt", map_location=device, weights_only=True)
-#     model_token = "facebook/esm2_t30_150M_UR50D"
-#     esm_model = transformers.AutoModelForMaskedLM.from_pretrained(model_token)
-#     esm_model = esm_model.to(device)
-#     print("Pre-trained models loaded successfully.")
-
-#     # Change the loading of preprocessed data to match the new data
-#     with open(f"./data/sequences/pickles/graphs.pkl", "rb") as f:
-#         print("Loading graph data ...")
-#         graph_data = pickle.load(f)
-#     print("Graph data loaded successfully.")
-
-#     with open(f"./data/sequences/pickles/pointclouds.pkl", "rb") as f:
-#         print("Loading point cloud data ...")
-#         point_cloud_data = pickle.load(f)
-#     print("Point Cloud data loaded successfully.")
-
-#     with open(f"./data/sequences/pickles/sequences.pkl", "rb") as f:
-#         print("Loading sequence data ...")
-#         sequence_data = pickle.load(f)
-#     print("Sequence data loaded successfully.")
-
-#     modality_dim = 640  # Dimension of each modality
-#     shared_dim = modality_dim * 3
-#     processed_data_list = []
-
-#     for i, (graph, point_cloud, sequence) in enumerate(
-#             tqdm(zip(graph_data, point_cloud_data, sequence_data), total=len(sequence_data), desc="Processing modalities")
-#         ):
-#         # Encode sequence data using ESM
-#         with torch.no_grad():
-#             sequence = sequence.to(device)
-#             encoded_sequence = esm_model(sequence, output_hidden_states=True)[
-#                 "hidden_states"
-#             ][-1][0, -1].to("cpu")
-#             encoded_sequence = z_score_standardization(encoded_sequence)
-
-#         # Encode graph data using VGAE
-#         with torch.no_grad():
-#             graph = graph.to(device)
-#             encoded_graph = vgae_model.encode(graph.x, graph.edge_index).to("cpu")
-#             encoded_graph = torch.mean(encoded_graph, dim=1)
-#             encoded_graph = z_score_standardization(encoded_graph)
-
-#         # Encode point cloud data using PAE
-#         with torch.no_grad():
-#             point_cloud = point_cloud.to(device)
-#             encoded_point_cloud = pae_model.encode(point_cloud[None, :]).squeeze().to("cpu")
-#             encoded_point_cloud = z_score_standardization(encoded_point_cloud)
-            
-#         # Define Linear Projections for each modality
-#         sequence_proj = nn.Linear(encoded_sequence.shape[-1], modality_dim).to(device)
-#         graph_proj = nn.Linear(encoded_graph.shape[-1], modality_dim).to(device)
-#         point_cloud_proj = nn.Linear(encoded_point_cloud.shape[-1], modality_dim).to(device)
-
-#         # Apply Linear Projections
-#         projected_sequence = sequence_proj(encoded_sequence)
-#         projected_graph = graph_proj(encoded_graph)
-#         projected_point_cloud = point_cloud_proj(encoded_point_cloud)
-
-#         attention_fusion = AttentionFusion(
-#             input_dims={"sequence": modality_dim, "graph": modality_dim, "point_cloud": modality_dim},
-#             shared_dim=shared_dim
-#         ).to(device)
         
-#         # Perform attention-based fusion using learned projections
-#         fused_data = attention_fusion(
-#             projected_sequence.to(device),
-#             projected_graph.to(device),
-#             projected_point_cloud.to(device),
-#         ).to("cpu")
+        # Calculate concatenated dimension dynamically
+        concatenated_data = torch.cat([encoded_sequence, encoded_graph, encoded_point_cloud], dim=0)
+        concatenated_dim = concatenated_data.size(0)  # Dynamic size based on concatenated data
 
-#         processed_data_list.append(fused_data)
+        # Apply a linear projection to the concatenated data
+        projection_layer = nn.Linear(concatenated_dim, shared_dim).to(device)
+        projected_data = projection_layer(concatenated_data)
 
-#     print("Attention Fusion Completed Successfully.")
+        # Save the projected data (this is the new representation after concatenation and projection)
+        processed_data_list.append(projected_data)
+        
+        # Uncomment to save each fused data object individually
+        fused_data_filename = f"./data/multimodal/{graph_file.split('.')[0]}.pt"
+        torch.save(projected_data, fused_data_filename)
 
-#     # Print the shapes of the encoded data
-#     print("Fused Data Shape: ", fused_data.shape)
-
-#     with open(f"./data/sequences/pickles/fusion.pkl", "wb") as f:
-#         pickle.dump(processed_data_list, f)
+    # Uncomment to save the processed data list as a pickle file
+    # with open(f"./data/pickles/fusion.pkl", "wb") as f:
+    #     pickle.dump(processed_data_list, f)
+    
+    print("Attention Fusion Completed Successfully.")
         
 def load_data():
     # Load the preprocessed data
-    with open("./data/pickles/fusion.pkl", "rb") as f:
-        print("Loading data ...")
-        dataset = pickle.load(f)
-    print("Data loaded successfully.")    
+    
+    # Uncomment to load the fused data from a single pickle file
+    # with open("./data/pickles/fusion.pkl", "rb") as f:
+    #     print("Loading data ...")
+    #     dataset = pickle.load(f)
+    
+    
+    # Uncomment to load the point cloud data from all .pt files
+    pointcloud_files = glob.glob('./data/multimodal/*.pt')
+    dataset = []
+
+    for file in pointcloud_files:
+        data = torch.load(file, weights_only=False)
+        dataset.append(data)    
+
     dataset = MultimodalDataset(dataset) # Create a custom dataset from the loaded data
+    print("Data loaded successfully.")
 
     # Split the dataset into train, validation, and test sets
     train_ratio = 0.8
@@ -249,7 +172,7 @@ def load_data():
     return train_loader, valid_loader, test_loader
 
 def train(train_data, valid_data, criterion, device):
-    model = ConcreteAutoencoder(input_dim, shared_dim, latent_dim, temperature).to(device)
+    model = AttentionFusion(input_dims, shared_dim).to(device)
 
     # Define optimizer (Adam)
     optimizer = torch.optim.Adam(model.parameters(), lr=0.0001, weight_decay=1e-5)
@@ -260,29 +183,36 @@ def train(train_data, valid_data, criterion, device):
         model.train()
         total_loss = 0.0
         
-        for data in train_data:
-            data = data.to(device)
+        for batch in train_data:
+            batch = batch.to(device)
             optimizer.zero_grad()
-
-            # Forward pass with fused modalities
-            reconstructed = model(data)
-            loss = criterion(reconstructed, data)
-
-            # Backpropagate the gradients
+            
+            # Encode and decode
+            fused_representation, attn_weights = model.encode(batch[:, :modality_dim], 
+                                                              batch[:, modality_dim:2*modality_dim], 
+                                                              batch[:, 2*modality_dim:])
+            reconstructed_data = model.decode(fused_representation)
+            
+            # Calculate loss (comparing reconstructed data to original input)
+            loss = criterion(reconstructed_data, batch)
+            
+            # Backpropagation
             loss.backward()
             optimizer.step()
-
+            
             total_loss += loss.item()
-
+        
+        # Log average loss
         average_loss = total_loss / len(train_data)
-        print(f"Epoch {epoch+1}/{num_epochs}, Loss: {average_loss:.4f}")
-
-    # Validate the model
+        print(f"Epoch {epoch + 1}/{num_epochs}, Loss: {average_loss:.4f}")
+    
+    # Validate the model after training
     val_loss = validate(model, valid_data, criterion, device)
     print(f"Validation Loss: {val_loss:.4f}")
-
+    
     # Save the trained model
-    torch.save(model.state_dict(), "./model/concrete_autoencoder.pt")
+    torch.save(model.state_dict(), "./data/models/attention_fusion.pt")
+    print("Model saved")
 
 
 def validate(model, valid_loader, criterion, device):
@@ -291,8 +221,11 @@ def validate(model, valid_loader, criterion, device):
     with torch.no_grad():
         for batch in valid_loader:
             batch = batch.to(device)
-            reconstructions = model(batch)
-            loss = criterion(reconstructions, batch)
+            fused_representation, _ = model.encode(batch[:, :modality_dim], 
+                                                              batch[:, modality_dim:2*modality_dim], 
+                                                              batch[:, 2*modality_dim:])
+            reconstructed_data = model.decode(fused_representation)
+            loss = criterion(reconstructed_data, batch)
             total_loss += loss.item()
 
     average_loss = total_loss / len(valid_loader)
@@ -300,16 +233,19 @@ def validate(model, valid_loader, criterion, device):
 
 
 def test(test_data, criterion, device):
-    model = ConcreteAutoencoder(input_dim, shared_dim, latent_dim, temperature).to(device)
-    model.load_state_dict(torch.load("./model/concrete_autoencoder.pt", weights_only=True))
+    model = AttentionFusion(input_dims, shared_dim).to(device)
+    model.load_state_dict(torch.load("./data/models/attention_fusion.pt", weights_only=True))
     model.to(device)
     model.eval()
     total_loss = 0.0
     with torch.no_grad():
         for batch in test_data:
             batch = batch.to(device)
-            reconstructions = model(batch)
-            loss = criterion(reconstructions, batch)
+            fused_representation, _ = model.encode(batch[:, :modality_dim], 
+                                                              batch[:, modality_dim:2*modality_dim], 
+                                                              batch[:, 2*modality_dim:])
+            reconstructed_data = model.decode(fused_representation)
+            loss = criterion(reconstructed_data, batch)
             total_loss += loss.item()
             
     average_loss = total_loss / len(test_data)
