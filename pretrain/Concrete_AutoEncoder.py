@@ -3,6 +3,7 @@ import pickle
 import sys
 import torch
 import torch.nn as nn
+import glob
 
 from torch_geometric.loader import DataLoader
 from torch.utils.data import Dataset
@@ -25,9 +26,19 @@ class MultimodalDataset(Dataset):
         return data_point  # Returning as-is for now
 
 # Load the preprocessed data
-with open("./data/sequences/pickles/fusion.pkl", "rb") as f:
-    print("Loading data ...")
-    dataset = pickle.load(f)
+
+# Uncomment to load the point cloud data from all .pt files
+pointcloud_files = glob.glob('./data/multimodal/*.pt')
+dataset = []
+
+for file in pointcloud_files:
+    data = torch.load(file, weights_only=False)
+    dataset.append(data)
+
+# Uncomment to load the fused data from a single pickle file
+# with open("./data/pickles/fusion.pkl", "rb") as f:
+#     print("Loading data ...")
+#     dataset = pickle.load(f)
 print("Data loaded successfully.")
 
 # Create a custom dataset from the loaded data
