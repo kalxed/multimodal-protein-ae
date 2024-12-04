@@ -8,6 +8,7 @@ import math
 from torch_geometric.data import DataLoader
 import torch.optim as optim
 
+import os
 import os.path as osp
 
 import sys
@@ -134,7 +135,7 @@ def test(pae_model, test_loader, device):
 def main():
     parser = argparse.ArgumentParser(description="Point Cloud Auto-Encoder (PAE)")
     parser.add_argument("--mode", choices=["train", "test"], help="Select mode: train or test", required=True)
-    parser.add_argument("--model-path", default="model.pt", type=str,dest="model_path",
+    parser.add_argument("--model-path", default="models/points.pt", type=str,dest="model_path",
                         help="where store the trained model, or where to load the model from for testing")
     parser.add_argument("--id-file", default="proteins", help="file containing all the protein ids",type=str, dest="id_file")
     parser.add_argument("--data-dir", default="data/pointclouds",help = "directory containing the pointcloud files", type=str, dest="data_dir")
@@ -148,6 +149,9 @@ def main():
 
     num_epochs = args.epochs
     batch_size = args.batch_size
+
+    os.makedirs(osp.dirname(model_path), exist_ok=True)
+
     # Define the dimension of the representation vector and the number of points
     k = 640
     num_points = 2048
