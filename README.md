@@ -38,7 +38,7 @@ multimodal-protein-ae
 │   ├── raw-structures/*.[cif | pdb]
 │   └── sequences/*.pt
 ├── models
-│   ├── FUSE.pt
+│   ├── CAE.pt
 │   ├── PAE.pt
 │   └── VGAE.pt
 ├── paper
