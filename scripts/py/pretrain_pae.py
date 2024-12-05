@@ -165,7 +165,8 @@ def main():
     elif args.mode == "test":
         # Test mode
         # Load the saved model
-        pae_model = torch.load(model_path, weights_only=True)
+        pae_model = PointAutoencoder(k, num_points).to(device)
+        pae_model.load_state_dict(torch.load(model_path, map_location=device, weights_only=True))
         # Evaluate the model on the test dataset
         test_loss = test(pae_model, test_loader, device)
         print(f"Average Chamfer Distance on Test Set: {test_loss:.4f}")

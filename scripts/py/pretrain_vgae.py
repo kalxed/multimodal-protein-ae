@@ -13,10 +13,6 @@ from mpae.utils.data import SingleModeDataset
 
 # from torch_geometric.data.data import DataEdgeAttr, DataTensorAttr
 
-torch.serialization.add_safe_globals([torch_geometric.data.data.DataEdgeAttr, 
-                                      torch_geometric.data.data.DataTensorAttr,
-                                      torch_geometric.data.storage.GlobalStorage])
-
 # Function to train the VGAE model
 def train(model, train_loader, optimizer, device):
     model.train()
@@ -123,8 +119,8 @@ def main():
     elif args.mode == "test":
         # Test mode
         # Load the saved model
-        vgae_model = torch.load(model_path)
-
+        vgae_model = VGAE(VariationalGCNEncoder(num_features, out_channels)).to(device)
+        vgae_model.load_state_dict(torch.load(model_path, map_location=device, weights_only=True))
         # Test the model on the test dataset
         AUC, AP = test_model(vgae_model, test_loader, device)
         print(f"AUC: {AUC}, AP: {AP}")
