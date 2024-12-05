@@ -4,7 +4,7 @@ import os
 import os.path as osp
 
 import torch.optim as optim
-from torch_geometric.data import DataLoader
+from torch_geometric.loader import DataLoader
 
 from mpae.nn.pae import *
 from mpae.utils.data import SingleModeDataset
