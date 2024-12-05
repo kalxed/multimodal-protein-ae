@@ -1,5 +1,10 @@
-from torch.utils.data import Dataset
+import glob
+import os.path as osp
+
 import torch
+from torch.utils.data import Dataset
+from typing import Union
+
 
 class SingleModeDataset(Dataset):
     def __init__(self, fnames:str = None, dir:str = None, pattern:str = "*.pt", transform=None, use_weights_only=True):
