@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH -J TRAIN-POINTCLOUD
+#SBATCH -J TEST-POINTCLOUD
 #SBATCH -n 1
 #SBATCH --gpus-per-task=1
 #SBATCH -o logs/test-pae.out
