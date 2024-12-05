@@ -169,7 +169,7 @@ def main():
         pae_model.load_state_dict(torch.load(model_path, map_location=device, weights_only=True))
         # Evaluate the model on the test dataset
         test_loss, test_size = test(pae_model, test_loader, device)
-        print(f"Done testing on test set of size{test_size}\nAverage Chamfer Distance on Test Set: {test_loss:.4f}")
+        print(f"Done testing on test set of size {test_size}\nAverage Chamfer Distance on Test Set: {test_loss:.4f}")
 
 if __name__ == "__main__":
     main()
