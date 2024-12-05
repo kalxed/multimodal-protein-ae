@@ -14,13 +14,26 @@ from torch_geometric.data import DataLoader
 from torch_geometric.loader import DataLoader
 sys.path.append('.')
 from model.vgae import *
+from torch.utils.data import Dataset
 
-from datasets import SingleModeDataset
+# from datasets import SingleModeDataset
 # from torch_geometric.data.data import DataEdgeAttr, DataTensorAttr
 
 torch.serialization.add_safe_globals([torch_geometric.data.data.DataEdgeAttr, 
                                       torch_geometric.data.data.DataTensorAttr,
                                       torch_geometric.data.storage.GlobalStorage])
+
+class GraphDataset(Dataset):
+    def __init__(self, file_paths):
+        self.file_paths = file_paths  # Positional argument (not `fnames`)
+
+    def __len__(self):
+        return len(self.file_paths)
+
+    def __getitem__(self, idx):
+        file_path = self.file_paths[idx]
+        graph = torch.load(file_path)
+        return graph
 
 # Function to train the VGAE model
 def train(model, train_loader, optimizer, device):
@@ -65,19 +78,21 @@ def test_model(model, test_loader, device):
     return AUC/n, AP/n
 
 def main():
+    # Commented out id-file argument to use custom dataset class
     parser = argparse.ArgumentParser(description="Variational Graph Autoencoder (VGAE)")
     parser.add_argument("--mode", choices=["train", "test"], help="Select mode: train or test", required=True)
-    parser.add_argument("--model-path", default="model.pt", type=str,dest="model_path",
-                        help="where store the trained model, or where to load the model from for testing")
-    parser.add_argument("--id-file", default="proteins", help="file containing all the protein ids",type=str, dest="id_file")
-    parser.add_argument("--data-dir", default="data/graphs",help = "directory containing the graph files", type=str, dest="data_dir")
-    parser.add_argument("--epochs", default=100, help="number of epochs to train for. only applicable when mode=train", type=int)
-    parser.add_argument("--batch-size", default=64, help="batch size for training", type=int, dest="batch_size")
+    parser.add_argument("--model-path", default="model.pt", type=str, dest="model_path",
+                        help="Where to store the trained model, or where to load the model from for testing")
+    # parser.add_argument("--id-file", default="proteins", help="file containing all the protein ids",type=str, dest="id_file")
+    parser.add_argument("--data-dir", default="data/graphs", help="Directory containing the graph .pt files", type=str, dest="data_dir")
+    parser.add_argument("--epochs", default=100, help="Number of epochs to train for. Only applicable when mode=train", type=int)
+    parser.add_argument("--batch-size", default=64, help="Batch size for training", type=int, dest="batch_size")
 
     args = parser.parse_args()
     model_path = args.model_path
     graph_dir = args.data_dir
-    id_file = args.id_file
+    # Commented out to use custom dataset class
+    # id_file = args.id_file 
 
     num_epochs = args.epochs
     batch_size = args.batch_size
@@ -85,10 +100,19 @@ def main():
     out_channels = 10
     num_features = 20
 
-    with open(id_file, "r") as f:
-        fnames = [osp.join(graph_dir, fname.strip()) for fname in f.readlines()]
+    # Collect all graph .pt files from the specified directory
+    fnames = [os.path.join(graph_dir, fname) for fname in sorted(os.listdir(graph_dir)) if fname.endswith(".pt")]
+    if not fnames:
+        raise ValueError(f"No .pt files found in the specified directory: {graph_dir}")
+    
+    # Modified to use custom dataset class
+    # with open(id_file, "r") as f:
+    #     fnames = [osp.join(graph_dir, fname.strip()) for fname in f.readlines()]
 
-    graph_ds = SingleModeDataset(fnames=fnames)
+    # Create dataset and split into train, validation, and test sets
+    graph_ds = GraphDataset(fnames)  # Pass `fnames` as a positional argument
+
+    # graph_ds = SingleModeDataset(fnames=fnames)
     train_set, val_set, test_set = random_split(graph_ds, [0.7, 0.1, 0.2], torch.Generator().manual_seed(1234))
 
     # Create data loaders for train, test, and validation sets

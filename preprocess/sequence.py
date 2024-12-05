@@ -2,15 +2,13 @@ import glob
 import gzip
 import os
 import os.path as osp
-
 import torch
 import transformers
 from Bio import SeqIO
 from Bio.PDB import MMCIFParser, PDBParser, Polypeptide
-
+from tqdm import tqdm
 
 # Load the ESM tokenizer 
-# * Change this to your own tokenizer
 model_token = "facebook/esm2_t30_150M_UR50D"
 esm_model = transformers.AutoModelForMaskedLM.from_pretrained(model_token)
 esm_tokenizer = transformers.AutoTokenizer.from_pretrained(model_token)
@@ -57,9 +55,9 @@ def eval_seq(structure_path: str, parser):
     for residue in structure.get_residues():
         if "CA" in residue:  # Check if the residue is part of the main chain
             try:
-                index_code = Polypeptide.three_to_index(residue.get_resname())
-                aa_code = Polypeptide.index_to_one(index_code)
-                sequence += aa_code
+                aa_code = Polypeptide.three_to_index(residue.get_resname())
+                # aa_code = Polypeptide.index_to_one(index_code)
+                sequence += str(aa_code)
             except KeyError:
                 # continue
                 # opting to drop the protein since that is what the graphs do.
@@ -107,7 +105,7 @@ def process_files(structure_files: list[str], res_dir:str, parser=PDBParser(QUIE
     print("Number of Files: ", len(structure_files))
     n = 0
     os.makedirs(res_dir, exist_ok=True)
-    for i, structure_file in enumerate(structure_files):
+    for i, structure_file in enumerate(tqdm(structure_files, desc="Processing files")):
         if osp.isfile(structure_file):
             sequence = eval_seq(structure_file, parser)
             if sequence:

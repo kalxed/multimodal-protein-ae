@@ -9,6 +9,7 @@ from sklearn.neighbors import radius_neighbors_graph
 from sklearn.preprocessing import LabelEncoder
 from torch_geometric.data import Data
 from torch_geometric.utils import negative_sampling
+from tqdm import tqdm
 
 # Initialize a PDB parser and PPBuilder for protein structure parsing
 parser = MMCIFParser(QUIET=True)
@@ -55,7 +56,7 @@ def structure_file_to_graph(pdb_path, radius=6.0):
     x = torch.tensor(node_features, dtype=torch.float32)
 
     # Calculate edges based on distance
-    edge_index = radius_neighbors_graph(coordinates, radius, mode='connectivity', include_self=False)
+    edge_index = radius_neighbors_graph(coordinates, radius, mode='connectivity', include_self='auto')
     edge_index = torch.tensor(np.array(edge_index.nonzero()), dtype=torch.long).contiguous()
     
     # Generate negative edge samples
@@ -89,7 +90,7 @@ os.makedirs(res_dir, exist_ok=True)
 
 # We want to construct a pytorch geometric graph object for each protein, and then save this to a file. 
 n = 0
-for i in range(first_file, last_file):
+for i in tqdm(range(first_file, last_file), desc="Processing files"):
     structure_file = structure_files[i]
     data = structure_file_to_graph(structure_file)
     if data is not None:
