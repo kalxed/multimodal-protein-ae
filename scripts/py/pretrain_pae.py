@@ -100,7 +100,7 @@ def test(pae_model, test_loader, device):
             total_test_loss += test_loss.item()
 
     average_test_loss = total_test_loss / len(test_loader)
-    return average_test_loss
+    return average_test_loss, len(test_loader)
 
 def main():
     parser = argparse.ArgumentParser(description="Point Cloud Auto-Encoder (PAE)")
@@ -168,8 +168,8 @@ def main():
         pae_model = PointAutoencoder(k, num_points).to(device)
         pae_model.load_state_dict(torch.load(model_path, map_location=device, weights_only=True))
         # Evaluate the model on the test dataset
-        test_loss = test(pae_model, test_loader, device)
-        print(f"Average Chamfer Distance on Test Set: {test_loss:.4f}")
+        test_loss, test_size = test(pae_model, test_loader, device)
+        print(f"Done testing on test set of size{test_size}\nAverage Chamfer Distance on Test Set: {test_loss:.4f}")
 
 if __name__ == "__main__":
     main()
