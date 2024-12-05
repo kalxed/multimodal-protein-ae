@@ -7,7 +7,7 @@ from typing import Union
 
 
 class SingleModeDataset(Dataset):
-    def __init__(self, fnames:str = None, dir:str = None, pattern:str = "*.pt", transform=None, use_weights_only=True):
+    def __init__(self, fnames:list[str] = None, dir:str = None, pattern:str = "*.pt", transform=None, use_weights_only=True):
         if fnames is None:
             self.fnames = [f for f in glob.glob(osp.join(dir, pattern))]
         else:
