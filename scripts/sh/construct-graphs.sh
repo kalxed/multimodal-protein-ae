@@ -9,7 +9,7 @@ source ~/miniconda3/bin/activate dlprotproj
 
 echo "$SLURM_ARRAY_TASK_ID"
 
-python preprocess/graph.py
+python scripts/py/make_graphs.py
 
 echo "done"
 

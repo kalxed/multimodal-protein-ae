@@ -9,7 +9,7 @@ echo "Slurm job id: $SLURM_JOB_ID"
 
 source ~/miniconda3/bin/activate dlprotproj
 
-python pretrain/PAE.py --mode train --epochs 200 --model-path models/pae-200.pt
+python scripts/py/pretrain_pae.py --mode train --epochs 200 --model-path models/pae-200.pt
 
 echo "Done"
 

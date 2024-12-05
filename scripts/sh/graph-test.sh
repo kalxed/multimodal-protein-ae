@@ -9,7 +9,7 @@ echo "Slurm job id: $SLURM_JOB_ID"
 
 source ~/miniconda3/bin/activate dlprotproj
 
-python pretrain/VGAE.py --mode test
+python scripts/py/pretrain_vgae.py --mode train
 
 echo "Done"
 

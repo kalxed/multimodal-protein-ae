@@ -9,7 +9,7 @@ source ~/miniconda3/bin/activate dlprotproj
 
 echo "slurm array task id: $SLURM_ARRAY_TASK_ID"
 
-python preprocess/pointcloud.py
+python scripts/py/make_pointcloud.py
 
 echo "done"
 
