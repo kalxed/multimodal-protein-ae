@@ -5,7 +5,7 @@ from .concrete_autoencoder import ConcreteAutoencoder
 
 __all__ = ["AttentionFusion",
            "ConcreteAutoencoder",
-           "esm"
+           "esm",
            "pae",
            "VariationalGCNEncoder",
            ]
