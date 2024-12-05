@@ -56,6 +56,7 @@ def fuse_proteins(device: torch.device, vgae_model_path: str, pae_model_path:str
     cloud_loader = DataLoader(cloud_data, batch_size=1, shuffle=False)
     res_dir = osp.join(data_dir, "fusion")
     os.makedirs(res_dir, exist_ok=True)
+    n_bad = 0
     for i, (graph, cloud, seq) in enumerate(zip(graph_loader, cloud_loader, seq_loader)):
         protein_id = protein_ids[i]
         # do this because they are in batches
@@ -65,12 +66,20 @@ def fuse_proteins(device: torch.device, vgae_model_path: str, pae_model_path:str
 
         
         # Perform attention-based fusion using learned projections
-        fused_data = fuse_with_attention(graph=graph, tokenized_seq=seq, pointcloud=cloud, vgae_model=vgae_model, 
-                                         pae_model=pae_model, device=device, modality_dim=modality_dim, shared_dim=shared_dim)
+        try:
+            fused_data = fuse_with_attention(graph=graph, tokenized_seq=seq, pointcloud=cloud, vgae_model=vgae_model, 
+                                             pae_model=pae_model, device=device, modality_dim=modality_dim, shared_dim=shared_dim)
+        except torch.OutOfMemoryError:
+            print(f"Failed with protein {protein_id}")
+            n_bad += 1
+            continue
         
         torch.save(fused_data, osp.join(res_dir, protein_id))
         if ((i+1) % 1000) == 0:
             print(f"Fused {i+1} files")
+    
+    if n_bad > 0:
+        print(f"Skipped {n_bad} proteins due to memory issues")
 
     print("Attention Fusion Completed Successfully.")
 
