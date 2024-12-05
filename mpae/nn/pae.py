@@ -6,6 +6,25 @@ from torch.autograd import Variable
 import numpy as np
 import torch.nn.functional as F
 
+class ChamferDistance(nn.Module):
+
+    def __init__(self):
+        super(ChamferDistance, self).__init__()
+
+    def forward(self, x, y):
+        x = x.unsqueeze(3)  # shape [b, d, n, 1]
+        y = y.unsqueeze(2)  # shape [b, d, 1, m]
+
+        # Compute pairwise L2-squared distances
+        d = torch.pow(x - y, 2)  # shape [b, d, n, m]
+        d = d.sum(1)  # shape [b, n, m]
+
+        min_for_each_x_i, _ = d.min(dim=2)  # shape [b, n]
+        min_for_each_y_j, _ = d.min(dim=1)  # shape [b, m]
+
+        distance = min_for_each_x_i.sum(1) + min_for_each_y_j.sum(1)  # shape [b]
+        return distance.mean(0)
+
 # Spatial Transformer Network for 3D data
 class STN3d(nn.Module):
     def __init__(self, channel):
@@ -40,7 +59,9 @@ class STN3d(nn.Module):
         x = F.relu(self.bn5(self.fc2(x)))
         x = self.fc3(x)
         # Generate identity matrix for transformation
-        iden = Variable(torch.from_numpy(np.array([1, 0, 0, 0, 1, 0, 0, 0, 1]).astype(np.float32))).view(1, 9).repeat(batchsize, 1).to(x.device)
+        iden = Variable(torch.from_numpy(np.array([1, 0, 0, 0, 1, 0, 0, 0, 1]).astype(np.float32))).view(1, 9).repeat(batchsize, 1)
+        if x.is_cuda:
+            iden = iden.cuda()
         # Add identity transformation
         x = x + iden
         x = x.view(-1, 3, 3)

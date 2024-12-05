@@ -1,43 +1,13 @@
 import argparse
-import warnings
-# Disable DeepSNAP warnings for clearer printout in the tutorial
-warnings.filterwarnings("ignore")
-
 import math
-
-from torch_geometric.data import DataLoader
-import torch.optim as optim
-
 import os
 import os.path as osp
 
-import sys
+import torch.optim as optim
+from torch_geometric.data import DataLoader
 
-sys.path.append(".")
-
-from model.PAE import *
-
-from datasets import SingleModeDataset
-
-# Define a custom Chamfer Distance loss function
-class ChamferDistance(nn.Module):
-
-    def __init__(self):
-        super(ChamferDistance, self).__init__()
-
-    def forward(self, x, y):
-        x = x.unsqueeze(3)  # shape [b, d, n, 1]
-        y = y.unsqueeze(2)  # shape [b, d, 1, m]
-
-        # Compute pairwise L2-squared distances
-        d = torch.pow(x - y, 2)  # shape [b, d, n, m]
-        d = d.sum(1)  # shape [b, n, m]
-
-        min_for_each_x_i, _ = d.min(dim=2)  # shape [b, n]
-        min_for_each_y_j, _ = d.min(dim=1)  # shape [b, m]
-
-        distance = min_for_each_x_i.sum(1) + min_for_each_y_j.sum(1)  # shape [b]
-        return distance.mean(0)
+from mpae.nn.pae import *
+from mpae.utils.data import SingleModeDataset
 
 
 # Function to apply random rotations to input data
@@ -189,7 +159,7 @@ def main():
                 print(f'Epoch [{epoch}/{num_epochs}], Train Loss: {train_loss:.4f}, Valid Loss: {val_loss:.4f}')
 
         # Save the PAE model
-        torch.save(pae_model, model_path)
+        torch.save(pae_model.state_dict(), model_path)
         print("Model saved")
 
     elif args.mode == "test":

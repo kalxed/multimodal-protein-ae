@@ -1,0 +1,4 @@
+#!/bin/bash
+#SBATCH -J FUSION
+#SBATCH
+#SBATCH

@@ -2,20 +2,15 @@
 import argparse
 import os
 import os.path as osp
-import pickle
-import random
-import sys
-import warnings
 
 import torch
 import torch_geometric
 from torch.utils.data import random_split
 from torch_geometric.data import DataLoader
 from torch_geometric.loader import DataLoader
-sys.path.append('.')
-from model.vgae import *
+from mpae.nn.vgae import *
+from mpae.utils.data import SingleModeDataset
 
-from datasets import SingleModeDataset
 # from torch_geometric.data.data import DataEdgeAttr, DataTensorAttr
 
 torch.serialization.add_safe_globals([torch_geometric.data.data.DataEdgeAttr, 
@@ -122,7 +117,7 @@ def main():
                 print(f'Epoch [{epoch}/{num_epochs}], Train Loss: {train_loss:.4f}, Valid Loss: {val_loss:.4f}')
 
         # Save the VGAE model
-        torch.save(vgae_model, model_path)
+        torch.save(vgae_model.state_dict(), model_path)
         print("Model saved")
 
     elif args.mode == "test":
