@@ -12,10 +12,4 @@ python scripts/py/encode_fuse.py --mode process --pae-path models/PAE-200.pt
 
 echo "Done."
 
-python scripts/py/encode_fuse.py --mode train --pae-path models/PAE-200.pt
-
-echo "Done training. Now testing:"
-
-
-
 exit 0
