@@ -28,17 +28,17 @@ class MultimodalDataset(Dataset):
 # Load the preprocessed data
 
 # Uncomment to load the point cloud data from all .pt files
-pointcloud_files = glob.glob('./data/multimodal/*.pt')
-dataset = []
+# pointcloud_files = glob.glob('./data/multimodal/*.pt')
+# dataset = []
 
-for file in pointcloud_files:
-    data = torch.load(file, weights_only=False)
-    dataset.append(data)
+# for file in pointcloud_files:
+#     data = torch.load(file, weights_only=False)
+#     dataset.append(data)
 
 # Uncomment to load the fused data from a single pickle file
-# with open("./data/pickles/fusion.pkl", "rb") as f:
-#     print("Loading data ...")
-#     dataset = pickle.load(f)
+with open("./data/pickles/fusion.pkl", "rb") as f:
+    print("Loading data ...")
+    dataset = pickle.load(f)
 print("Data loaded successfully.")
 
 # Create a custom dataset from the loaded data
@@ -62,7 +62,7 @@ train_dataset, valid_dataset, test_dataset = torch.utils.data.random_split(
     dataset, [train_size, valid_size, test_size]
 )
 
-batch_size = round(train_size * 0.1)
+batch_size = 8
 
 # Create data loaders for training, validation, and test
 train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
@@ -72,14 +72,14 @@ test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
 # Initialize the model with the temperature parameter
 input_dim = 640 * 3  # Input dimension after fusion
 shared_dim = 640  # Shared dimension after fusion
-latent_dim = 64  # Latent space size
-temperature = .5  # Concrete distribution temperature
+latent_dim = 256  # Latent space size
+temperature = .8  # Concrete distribution temperature
 
-model = ConcreteAutoencoder(input_dim, shared_dim, latent_dim, temperature).to(device)
+model = ConcreteAutoencoder(input_dim, latent_dim, shared_dim, temperature).to(device)
 
 # Define loss function (MSE) and optimizer (Adam)
 criterion = nn.MSELoss()
-optimizer = torch.optim.Adam(model.parameters(), lr=0.001, weight_decay=1e-5)
+optimizer = torch.optim.Adam(model.parameters(), lr=0.0005, weight_decay=1e-5)
 
 def train(model, train_data, optimizer, criterion, device):
     model.train()
@@ -101,35 +101,6 @@ def train(model, train_data, optimizer, criterion, device):
 
     average_loss = total_loss / len(train_data)
     return average_loss
-
-
-def validate(model, valid_loader, criterion, device):
-    model.eval()
-    total_loss = 0.0
-    with torch.no_grad():
-        for batch in valid_loader:
-            batch = batch.to(device)
-            reconstructions = model(batch)
-            loss = criterion(reconstructions, batch)
-            total_loss += loss.item()
-
-    average_loss = total_loss / len(valid_loader)
-    return average_loss
-
-
-def test(model, test_loader, criterion, device):
-    model.eval()
-    total_loss = 0.0
-    with torch.no_grad():
-        for batch in test_loader:
-            batch = batch.to(device)
-            reconstructions = model(batch)
-            loss = criterion(reconstructions, batch)
-            total_loss += loss.item()
-            
-    average_loss = total_loss / len(test_loader)
-    return average_loss
-
 
 def eval(model, data, criterion, device):
     model.eval()
@@ -155,7 +126,7 @@ def main():
     args = parser.parse_args()
 
     if args.mode == "train":
-        num_epochs = 20
+        num_epochs = 100
         for epoch in range(num_epochs):
             average_loss = train(model, train_loader, optimizer, criterion, device)
             print(f"Epoch {epoch+1}/{num_epochs}, Loss: {average_loss:.4f}")

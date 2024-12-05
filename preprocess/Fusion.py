@@ -31,8 +31,6 @@ class MultimodalDataset(Dataset):
 input_dim = 640 * 3  # Input dimension after fusion
 modality_dim = 640  # Dimension of each modality
 shared_dim = 640  # Shared dimension after fusion
-latent_dim = 64  # Latent space size
-temperature = .5  # Concrete distribution temperature
 
 # Input dimensions for the AttentionFusion model
 input_dims = {"sequence": modality_dim, "graph": modality_dim, "point_cloud": modality_dim}  # Input feature dims for each modality
@@ -115,12 +113,12 @@ def process(device):
         processed_data_list.append(projected_data)
         
         # Uncomment to save each fused data object individually
-        fused_data_filename = f"./data/multimodal/{graph_file.split('.')[0]}.pt"
-        torch.save(projected_data, fused_data_filename)
+        # fused_data_filename = f"./data/multimodal/{graph_file.split('.')[0]}.pt"
+        # torch.save(projected_data, fused_data_filename)
 
     # Uncomment to save the processed data list as a pickle file
-    # with open(f"./data/pickles/fusion.pkl", "wb") as f:
-    #     pickle.dump(processed_data_list, f)
+    with open(f"./data/pickles/fusion.pkl", "wb") as f:
+        pickle.dump(processed_data_list, f)
     
     print("Attention Fusion Completed Successfully.")
         
@@ -128,18 +126,17 @@ def load_data():
     # Load the preprocessed data
     
     # Uncomment to load the fused data from a single pickle file
-    # with open("./data/pickles/fusion.pkl", "rb") as f:
-    #     print("Loading data ...")
-    #     dataset = pickle.load(f)
+    with open("./data/pickles/fusion.pkl", "rb") as f:
+        print("Loading data ...")
+        dataset = pickle.load(f)
     
-    
-    # Uncomment to load the point cloud data from all .pt files
-    pointcloud_files = glob.glob('./data/multimodal/*.pt')
-    dataset = []
+    # Uncomment to load data from all .pt files
+    # pointcloud_files = glob.glob('./data/multimodal/*.pt')
+    # dataset = []
 
-    for file in pointcloud_files:
-        data = torch.load(file, weights_only=False)
-        dataset.append(data)    
+    # for file in pointcloud_files:
+    #     data = torch.load(file, weights_only=False)
+    #     dataset.append(data)    
 
     dataset = MultimodalDataset(dataset) # Create a custom dataset from the loaded data
     print("Data loaded successfully.")

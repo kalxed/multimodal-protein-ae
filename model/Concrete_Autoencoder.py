@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import torch.nn.init as init
 
 # Concrete Distribution with Straight-Through Estimator
 class ConcreteDistribution(nn.Module):
@@ -22,7 +23,7 @@ class ConcreteDistribution(nn.Module):
         return y
 
 class ConcreteAutoencoder(nn.Module):
-    def __init__(self, input_dim, latent_dim, shared_dim=128, temperature=1.0, dropout_rate=0.3):
+    def __init__(self, input_dim, latent_dim, shared_dim=128, temperature=1.0, dropout_rate=0.1):
         super(ConcreteAutoencoder, self).__init__()
 
         # Encoder: Mapping input to latent space
@@ -44,6 +45,15 @@ class ConcreteAutoencoder(nn.Module):
         # Concrete distribution parameters
         self.temperature = temperature
         self.concrete = ConcreteDistribution(temperature=self.temperature, hard=False)
+        
+        # Apply weight initialization
+        self.apply(self.init_weights)
+
+    def init_weights(self, m):
+        if isinstance(m, nn.Linear):
+            init.kaiming_normal_(m.weight, a=0.01, mode='fan_in', nonlinearity='leaky_relu')
+            if m.bias is not None:
+                init.zeros_(m.bias)
 
     def forward(self, fused_rep):
         """
