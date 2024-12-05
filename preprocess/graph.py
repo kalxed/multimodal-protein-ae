@@ -4,7 +4,7 @@ import os.path as osp
 
 import numpy as np
 import torch
-from Bio.PDB import MMCIFParser, Polypeptide, PPBuilder
+from Bio.PDB import PDBParser, MMCIFParser, Polypeptide, PPBuilder
 from sklearn.neighbors import radius_neighbors_graph
 from sklearn.preprocessing import LabelEncoder
 from torch_geometric.data import Data
@@ -14,20 +14,22 @@ from torch_geometric.utils import negative_sampling
 parser = MMCIFParser(QUIET=True)
 
 # Define the standard amino acids and create a LabelEncoder for encoding them
-amino_acids = list(range(20))
-label_encoder = LabelEncoder()
-label_encoder.fit(amino_acids)
-num_amino_acids = len(amino_acids)
 
-# Function to one-hot encode amino acid sequences
-def one_hot_encode_amino_acid(sequence):
-    amino_acid_indices = label_encoder.transform(list(sequence))
-    one_hot = np.zeros((len(sequence), num_amino_acids), dtype=np.float32)
-    one_hot[np.arange(len(sequence)), amino_acid_indices] = 1
-    return one_hot
 
 # Function to convert a PDB file to a PyTorch Geometric graph data object
-def structure_file_to_graph(pdb_path, radius=6.0):
+def structure_file_to_graph(pdb_path, radius=6.0, parser=PDBParser(QUIET=True)):
+    amino_acids = list(range(20))
+    label_encoder = LabelEncoder()
+    label_encoder.fit(amino_acids)
+    num_amino_acids = len(amino_acids)
+
+    # Function to one-hot encode amino acid sequences
+    def one_hot_encode_amino_acid(sequence):
+        amino_acid_indices = label_encoder.transform(list(sequence))
+        one_hot = np.zeros((len(sequence), num_amino_acids), dtype=np.float32)
+        one_hot[np.arange(len(sequence)), amino_acid_indices] = 1
+        return one_hot
+    
     try:
         structure = parser.get_structure('protein', pdb_path)
     except Exception:
