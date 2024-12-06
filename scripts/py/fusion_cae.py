@@ -92,6 +92,9 @@ def get_loaders(protein_list: list[str], data_dir: str, batch_size, train_size=0
     train_dataset, val_dataset, test_dataset = torch.utils.data.random_split(
         dataset, [train_size, val_size, test_size], torch.Generator().manual_seed(1234)
     )
+    print(f"train data length: {len(train_dataset)}")
+    print(f"val data length: {len(val_dataset)}")
+    print(f"test data length: {len(test_dataset)}")
 
     # Create data loaders for training, validation, and test
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
@@ -206,9 +209,6 @@ def main():
 
     if args.mode != "process":
         train_loader, val_loader, test_loader = get_loaders(protein_ids, data_dir, batch_size)
-        print(f"train data length: {len(train_loader)}")
-        print(f"val data length: {len(val_loader)}")
-        print(f"test data length: {len(test_loader)}")
         criterion = nn.MSELoss()
 
     if args.mode == "train":

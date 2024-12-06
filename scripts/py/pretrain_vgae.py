@@ -83,12 +83,16 @@ def main():
         fnames = [osp.join(graph_dir, fname.strip()) for fname in f.readlines()]
 
     graph_ds = SingleModeDataset(fnames=fnames)
-    train_set, val_set, test_set = random_split(graph_ds, [0.7, 0.1, 0.2], torch.Generator().manual_seed(1234))
+    train_dataset, val_dataset, test_dataset = random_split(graph_ds, [0.7, 0.1, 0.2], torch.Generator().manual_seed(1234))
+
+    print(f"train data length: {len(train_dataset)}")
+    print(f"val data length: {len(val_dataset)}")
+    print(f"test data length: {len(test_dataset)}")
 
     # Create data loaders for train, test, and validation sets
-    train_loader = DataLoader(train_set, batch_size=batch_size, shuffle=True, pin_memory=True)
-    val_loader = DataLoader(val_set, batch_size=batch_size, shuffle=False)
-    test_loader = DataLoader(test_set, batch_size=batch_size, shuffle=False)
+    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, pin_memory=True)
+    val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
+    test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
     
 
     # Create an instance of VGAE using the VariationalGCNEncoder
@@ -101,9 +105,6 @@ def main():
     # Create an optimizer for the VGAE (Variational Graph Autoencoder) model
     optimizer = torch.optim.Adam(vgae_model.parameters(), lr=0.001)
 
-    print(f"train data length: {len(train_loader)}")
-    print(f"val data length: {len(val_loader)}")
-    print(f"test data length: {len(test_loader)}")
     
     if args.mode == "train":
         # Training mode
