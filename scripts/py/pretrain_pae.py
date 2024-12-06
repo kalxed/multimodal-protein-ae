@@ -149,7 +149,9 @@ def main():
     pae_model = pae_model.to(device)
 
     optimizer = optim.Adam(pae_model.parameters(), lr=0.001)
-
+    print(f"train data length: {len(train_loader)}")
+    print(f"val data length: {len(val_loader)}")
+    print(f"test data length: {len(test_loader)}")
     if args.mode == "train":
         # Training mode
         for epoch in range(1, num_epochs + 1):

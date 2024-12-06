@@ -100,7 +100,10 @@ def main():
 
     # Create an optimizer for the VGAE (Variational Graph Autoencoder) model
     optimizer = torch.optim.Adam(vgae_model.parameters(), lr=0.001)
-    
+
+    print(f"train data length: {len(train_loader)}")
+    print(f"val data length: {len(val_loader)}")
+    print(f"test data length: {len(test_loader)}")
     
     if args.mode == "train":
         # Training mode
