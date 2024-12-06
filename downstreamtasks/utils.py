@@ -1,43 +1,26 @@
-import glob
-import gzip
 import os
-import os.path as osp
 import torch
 import transformers
-from Bio import SeqIO
-from Bio.PDB import MMCIFParser, PDBParser, Polypeptide
-from tqdm import tqdm
+from Bio.PDB import PDBParser, Polypeptide
 import numpy as np
 from torch_geometric.data import Data
-from torch_geometric.utils import kneighbors_graph, negative_sampling
+from torch_geometric.utils import negative_sampling
 from sklearn.preprocessing import LabelEncoder
-
 import warnings
-
 warnings.filterwarnings("ignore")
 import random
-
 random.seed(42)
 import pickle
 from math import sqrt
 from scipy.stats import spearmanr, pearsonr
-# from lifelines.utils import concordance_index
+from lifelines.utils import concordance_index
 import torch
 import numpy as np
 import transformers
 import os
-import glob
 import h5py
 from sklearn.neighbors import radius_neighbors_graph
 from sklearn.preprocessing import LabelEncoder
-from sklearn.model_selection import train_test_split
-from sklearn.metrics import (
-    mean_squared_error,
-    mean_absolute_error,
-    confusion_matrix,
-    accuracy_score,
-    roc_auc_score,
-)
 from torch_geometric.nn import TopKPooling
 from torch_geometric.utils import negative_sampling
 from torch_geometric.data import Data
@@ -74,12 +57,12 @@ from model.Attention import *
 
 def load_models():  
     # Load pre-trained models
-    vgae_model = torch.load(f"../data/models/VGAE.pt", map_location=device)
-    pae_model = torch.load(f"../data/models/PAE.pt", map_location=device)
+    vgae_model = torch.load(f"./data/models/VGAE.pt", map_location=device)
+    pae_model = torch.load(f"./data/models/PAE.pt", map_location=device)
     model_token = "facebook/esm2_t30_150M_UR50D"
     esm_model = transformers.AutoModelForMaskedLM.from_pretrained(model_token)
     esm_model = esm_model.to(device)
-    concrete_model = torch.load(f"../data/models/Concrete.pt", map_location=device)
+    concrete_model = torch.load(f"./data/models/Concrete.pt", map_location=device)
     print("Pre-trained models loaded successfully.")
     return vgae_model, pae_model, esm_model, concrete_model
 
@@ -125,51 +108,50 @@ def read_pdb(pdb_path):
             except KeyError:
                 # Skip this protein if it contains non-standard amino acids
                 return None, None, None
-            sequence += aa_code
+            sequence += str(aa_code)
             coordinates.append(residue['CA'].get_coord())        
-        coordinates = np.array(coordinates, dtype=np.float32)
-        node_features = one_hot_encode_amino_acid(sequence)
-        x = torch.tensor(node_features, dtype=torch.float32)
-        edge_index = radius_neighbors_graph(coordinates, radius, mode='connectivity', include_self='auto')
-        edge_index = edge_index.nonzero()
-        edge_index = np.array(edge_index)
-        edge_index = torch.from_numpy(edge_index).to(torch.long).contiguous()
-        neg_edge_index = negative_sampling(
-            edge_index= edge_index,
-            num_nodes= x.size(0),
-            num_neg_samples= edge_index.size(1)//2
-        )
-        graph = Data(x=x, edge_index=edge_index, neg_edge_index=neg_edge_index)
+    coordinates = np.array(coordinates, dtype=np.float32)
+    node_features = one_hot_encode_amino_acid(sequence)
+    x = torch.tensor(node_features, dtype=torch.float32)
+    edge_index = radius_neighbors_graph(coordinates, radius, mode='connectivity', include_self='auto')
+    edge_index = edge_index.nonzero()
+    edge_index = np.array(edge_index)
+    edge_index = torch.from_numpy(edge_index).to(torch.long).contiguous()
+    neg_edge_index = negative_sampling(
+        edge_index= edge_index,
+        num_nodes= x.size(0),
+        num_neg_samples= edge_index.size(1)//2
+    )
+    graph = Data(x=x, edge_index=edge_index, neg_edge_index=neg_edge_index)
 
         # Point Cloud
-        desired_num_points = 2048
-        coordinates = np.zeros((desired_num_points, 3))
-        for i, atom in enumerate(structure.get_atoms()):
-            if i == desired_num_points:
-                break
-            coordinates.append(atom.get_coord())
-        # coordinates = np.array(coordinates, dtype=np.float32)
-        # num_points = coordinates.shape[0]
-        # if num_points < desired_num_points:
-        #     padding = np.zeros((desired_num_points - num_points, 3), dtype=np.float32)
-        #     coordinates = np.concatenate((coordinates, padding), axis=0)
-        # elif num_points > desired_num_points:
-        #     coordinates = coordinates[:desired_num_points, :]
-        coordinates = torch.tensor(coordinates, dtype=torch.float32)
-        coordinates -= coordinates.mean(0)
-        d = np.sqrt((coordinates ** 2).sum(1))
-        coordinates /= d.max()
-        point_cloud = torch.FloatTensor(coordinates).permute(1, 0)
+    desired_num_points = 2048
+    coordinates = np.zeros((desired_num_points, 3))
+    for i, atom in enumerate(structure.get_atoms()):
+        if i == desired_num_points:
+            break
+        coordinates[i] = atom.get_coord()
+    # coordinates = np.array(coordinates, dtype=np.float32)
+    # num_points = coordinates.shape[0]
+    # if num_points < desired_num_points:
+    #     padding = np.zeros((desired_num_points - num_points, 3), dtype=np.float32)
+    #     coordinates = np.concatenate((coordinates, padding), axis=0)
+    # elif num_points > desired_num_points:
+    #     coordinates = coordinates[:desired_num_points, :]
+    coordinates = torch.tensor(coordinates, dtype=torch.float32)
+    coordinates -= coordinates.mean(0)
+    d = np.sqrt((coordinates ** 2).sum(1))
+    coordinates /= d.max()
+    point_cloud = torch.FloatTensor(coordinates).permute(1, 0)
 
-        # Sequence
-        sequence = esm_tokenizer(sequence, return_tensors="pt", padding=True, truncation=True, max_length=2048)["input_ids"]
+    # Sequence
+    sequence = esm_tokenizer(sequence, return_tensors="pt", padding=True, truncation=True, max_length=2048)["input_ids"]
 
     return sequence, graph, point_cloud
 
 def get_modalities(protein_path, ESM, VGAE, PAE, Fusion):
     # Check file_extension
     file_name, file_extension = os.path.splitext(protein_path)
-    print(file_extension)
     if file_extension == ".pdb":
         sequence, graph, point_cloud = read_pdb(protein_path)
     elif file_extension == ".hdf5":
@@ -237,53 +219,6 @@ def process_encoded_graph(encoded_graph, edge_index, fixed_size=640, feature_dim
 
     return processed_encoded_graph[:fixed_size]
 
-
-
-    print(f"Protein path: {protein_path}")
-    # Check file_extension
-    file_name, file_extension = os.path.splitext(protein_path)
-    print(file_extension)
-    if file_extension == ".pdb":
-        sequence, graph, point_cloud = read_pdb(protein_path)
-    elif file_extension == ".hdf5":
-        sequence, graph, point_cloud = read_hdf5(protein_path)
-
-    # Using GPU
-    # graph = graph.to(device)
-    # point_cloud = point_cloud.to(device)
-    # sequence = sequence.to(device)
-
-    # Pass the sequence data through ESM for encoding
-    with torch.no_grad():
-        encoded_sequence = ESM(sequence, output_hidden_states=True)["hidden_states"][
-            -1
-        ][0, -1].to("cpu")
-        encoded_sequence = z_score_standardization(encoded_sequence)
-
-    # Pass the graph data through VGAE for encoding
-    with torch.no_grad():
-        encoded_graph = VGAE.encode(graph.x, graph.edge_index).to("cpu")
-        encoded_graph = process_encoded_graph(encoded_graph, graph.edge_index.to("cpu"))
-        encoded_graph = torch.mean(encoded_graph, dim=1)
-        encoded_graph = z_score_standardization(encoded_graph)
-
-    # Pass the point cloud data through PAE for encoding
-    with torch.no_grad():
-        encoded_point_cloud = PAE.encode(point_cloud[None, :]).squeeze().to("cpu")
-        encoded_point_cloud = z_score_standardization(encoded_point_cloud)
-
-    concatenated_data = (
-        torch.cat((encoded_sequence, encoded_graph, encoded_point_cloud), dim=0)
-        .unsqueeze(0)
-        .to(device)
-    )
-    multimodal_representation = Fusion.encode(concatenated_data).squeeze().to("cpu")
-    return (
-        multimodal_representation,
-        encoded_sequence,
-        encoded_graph,
-        encoded_point_cloud,
-    )
 
 
 def read_hdf5(hdf5_path):

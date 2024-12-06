@@ -136,7 +136,8 @@ def main():
             print(f"Validation Loss: {val_loss:.4f}")
 
         # Save trained model
-        torch.save(model.state_dict(), "./data/models/Concrete.pt")
+        torch.save(model, "./data/models/Concrete.pt")
+        # torch.save(model.state_dict(), "./data/models/Concrete.pt")
 
     elif args.mode == "test":
         model.load_state_dict(torch.load("./data/models/Concrete.pt", weights_only=True))

@@ -2,7 +2,7 @@ import torch
 import pickle
 import pandas as pd
 import sys
-import tqdm
+from tqdm import tqdm
 from rdkit import Chem
 from rdkit.Chem import AllChem
 from utils import *
@@ -26,23 +26,43 @@ class ExactGPModel(gpytorch.models.ExactGP):
         covar_x = self.covar_module(x)
         return gpytorch.distributions.MultivariateNormal(mean_x, covar_x)
 
+from rdkit.Chem import rdFingerprintGenerator
+
 def get_ligand_representation(ligand_smiles):
+    # Convert SMILES to RDKit molecule object
     mol = Chem.MolFromSmiles(ligand_smiles)
-    fingerprint = AllChem.GetMorganFingerprintAsBitVect(
-        mol, 2, nBits=1024
-    )  # Change radius as needed
+    if mol is None:
+        raise ValueError(f"Invalid SMILES: {ligand_smiles}")
+
+    # Create a Morgan fingerprint generator
+    generator = rdFingerprintGenerator.GetMorganGenerator(fpSize=1024, radius=2)
+    
+    # Generate the fingerprint
+    fingerprint = generator.GetFingerprint(mol)
+    
+    # Convert fingerprint to tensor
     fingerprint_tensor = torch.tensor(fingerprint, dtype=torch.float32)
     return fingerprint_tensor
+
+# def get_ligand_representation(ligand_smiles):
+#     mol = Chem.MolFromSmiles(ligand_smiles)
+#     fingerprint = AllChem.GetMorganFingerprintAsBitVect(
+#         mol, 2, nBits=1024
+#     )  # Change radius as needed
+#     fingerprint_tensor = torch.tensor(fingerprint, dtype=torch.float32)
+#     return fingerprint_tensor
 
 def process(dataset_name):
     """
     Process all modality with protein-ligand affinity data
     """
-    # Load pre-trained models
-    vgae_model, pae_model, esm_model, concrete_model = load_models()
-    data_folder = f'../data/{dataset_name}'
+    # Load dataset
+    data_folder = f'./data/{dataset_name}'
     df = pd.read_csv(f'{data_folder}/label.csv')
     print("Number of samples:", len(df))
+    
+    # Load pre-trained models
+    vgae_model, pae_model, esm_model, concrete_model = load_models()
 
     mulmodal = []
     sequence = []
@@ -50,7 +70,12 @@ def process(dataset_name):
     point_cloud = []
 
     # Iterate through the dataset to process each sample
-    for i, (ligand_smiles, protein_name) in tqdm(enumerate(zip(df["ligand"], df["protein"]))):
+    for i, (ligand_smiles, protein_name) in tqdm(
+        enumerate(zip(df["ligand"], df["protein"])),
+        desc="Processing proteins and ligands",
+        total=len(df),
+        bar_format="{l_bar}{bar} | Elapsed: {elapsed}, Remaining: {remaining}",
+    ):
         pdb_path = f"{data_folder}/pdb/{protein_name}.pdb"
         multimodal_representation, encoded_sequence, encoded_graph, encoded_point_cloud = get_modalities(pdb_path, esm_model, vgae_model, pae_model, concrete_model)
         ligand_representation = get_ligand_representation(ligand_smiles)

@@ -57,6 +57,12 @@ class ConcreteAutoencoder(nn.Module):
             init.kaiming_normal_(m.weight, a=0.01, mode='fan_in', nonlinearity='leaky_relu')
             if m.bias is not None:
                 init.zeros_(m.bias)
+                
+    def encode(self, fused_rep):
+        """
+        Encodes the input into the latent space.
+        """
+        return self.encoder(fused_rep)
 
     def forward(self, fused_rep):
         """
