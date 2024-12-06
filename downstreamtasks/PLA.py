@@ -77,18 +77,19 @@ def process(dataset_name):
         graph.append(graph_feature)
         point_cloud.append(point_cloud_feature)
         
+        # TODO: if needed. commented out for now
         # Save and reset data after reaching the batch size
-        if (i + 1) % batch_size == 0 or (i + 1) == len(df):
-            batch_counter += 1
-            # batch_file_prefix = f"{data_folder}/batch_{batch_counter}"
-            pickle_dump(batch_counter, data_folder, mulmodal, sequence, graph, point_cloud)
+        # if (i + 1) % batch_size == 0 or (i + 1) == len(df):
+        #     batch_counter += 1
+        #     pickle_batch_dump(batch_counter, data_folder, mulmodal, sequence, graph, point_cloud)
 
-            # Clear lists to free up memory
-            mulmodal.clear()
-            sequence.clear()
-            graph.clear()
-            point_cloud.clear()
+        #     # Clear lists to free up memory
+        #     mulmodal.clear()
+        #     sequence.clear()
+        #     graph.clear()
+        #     point_cloud.clear()
 
+    pickle_dump(data_folder, mulmodal, sequence, graph, point_cloud)
     print("Features processed successfully.")
 
 def setup(dataset, modal):

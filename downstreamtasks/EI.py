@@ -68,17 +68,6 @@ def process():
 
     # Save the multimodal representations to pickle files
     pickle_dump(data_folder, mulmodal, sequence, graph, point_cloud)
-    # with open(f'{data_folder}/multimodal.pkl', 'wb') as f:
-    #     pickle.dump(mulmodal, f)
-
-    # with open(f'{data_folder}/sequence.pkl', 'wb') as f:
-    #     pickle.dump(sequence, f)
-
-    # with open(f'{data_folder}/graph.pkl', 'wb') as f:
-    #     pickle.dump(graph, f)
-
-    # with open(f'{data_folder}/point_cloud.pkl', 'wb') as f:
-    #     pickle.dump(point_cloud, f)
     
 
 def load_data(modal, data_folder):
