@@ -4,7 +4,7 @@ import os
 import os.path as osp
 
 import torch.optim as optim
-from torch_geometric.data import DataLoader
+from torch_geometric.loader import DataLoader
 
 from mpae.nn.pae import *
 from mpae.utils.data import SingleModeDataset
@@ -134,12 +134,16 @@ def main():
     val = 0.1
     test_ratio = 0.2
 
-    train_set, val_set, test_set = torch.utils.data.random_split(dataset, [train_ratio, val, test_ratio], torch.Generator().manual_seed(1234))
+    train_dataset, val_dataset, test_dataset = torch.utils.data.random_split(dataset, [train_ratio, val, test_ratio], torch.Generator().manual_seed(1234))
+    
+    print(f"train data length: {len(train_dataset)}")
+    print(f"val data length: {len(val_dataset)}")
+    print(f"test data length: {len(test_dataset)}")
 
     # Create data loaders for train, validation, and test sets
-    train_loader = DataLoader(train_set, batch_size=batch_size, shuffle=True)
-    val_loader = DataLoader(val_set, batch_size=batch_size, shuffle=False)
-    test_loader = DataLoader(test_set, batch_size=batch_size, shuffle=False)
+    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
+    val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
+    test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
 
     pae_model = PointAutoencoder(k, num_points)
 
@@ -165,7 +169,8 @@ def main():
     elif args.mode == "test":
         # Test mode
         # Load the saved model
-        pae_model = torch.load(model_path, weights_only=True)
+        pae_model = PointAutoencoder(k, num_points).to(device)
+        pae_model.load_state_dict(torch.load(model_path, map_location=device, weights_only=True))
         # Evaluate the model on the test dataset
         test_loss = test(pae_model, test_loader, device)
         print(f"Average Chamfer Distance on Test Set: {test_loss:.4f}")

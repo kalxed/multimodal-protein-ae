@@ -11,7 +11,7 @@ from torch_geometric.loader import DataLoader
 from mpae.nn.vgae import *
 from mpae.utils.data import SingleModeDataset
 
-# from torch_geometric.data.data import DataEdgeAttr, DataTensorAttr
+from torch_geometric.data.data import DataEdgeAttr, DataTensorAttr
 
 torch.serialization.add_safe_globals([torch_geometric.data.data.DataEdgeAttr, 
                                       torch_geometric.data.data.DataTensorAttr,
@@ -62,7 +62,7 @@ def test_model(model, test_loader, device):
 def main():
     parser = argparse.ArgumentParser(description="Train the Variational Graph Autoencoder (VGAE)")
     parser.add_argument("--mode", choices=["train", "test"], help="Select mode: train or test", required=True)
-    parser.add_argument("--model-path", default="models/graph.pt", type=str,dest="model_path",
+    parser.add_argument("--model-path", default="models/VGAE.pt", type=str,dest="model_path",
                         help="where store the trained model, or where to load the model from for testing")
     parser.add_argument("--id-file", default="proteins", help="file containing all the protein ids",type=str, dest="id_file")
     parser.add_argument("--data-dir", default="data/graphs",help = "directory containing the graph files", type=str, dest="data_dir")
@@ -87,12 +87,16 @@ def main():
         fnames = [osp.join(graph_dir, fname.strip()) for fname in f.readlines()]
 
     graph_ds = SingleModeDataset(fnames=fnames)
-    train_set, val_set, test_set = random_split(graph_ds, [0.7, 0.1, 0.2], torch.Generator().manual_seed(1234))
+    train_dataset, val_dataset, test_dataset = random_split(graph_ds, [0.7, 0.1, 0.2], torch.Generator().manual_seed(1234))
+
+    print(f"train data length: {len(train_dataset)}")
+    print(f"val data length: {len(val_dataset)}")
+    print(f"test data length: {len(test_dataset)}")
 
     # Create data loaders for train, test, and validation sets
-    train_loader = DataLoader(train_set, batch_size=batch_size, shuffle=True, pin_memory=True)
-    val_loader = DataLoader(val_set, batch_size=batch_size, shuffle=False)
-    test_loader = DataLoader(test_set, batch_size=batch_size, shuffle=False)
+    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, pin_memory=True)
+    val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
+    test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
     
 
     # Create an instance of VGAE using the VariationalGCNEncoder
@@ -104,7 +108,7 @@ def main():
 
     # Create an optimizer for the VGAE (Variational Graph Autoencoder) model
     optimizer = torch.optim.Adam(vgae_model.parameters(), lr=0.001)
-    
+
     
     if args.mode == "train":
         # Training mode
@@ -123,8 +127,8 @@ def main():
     elif args.mode == "test":
         # Test mode
         # Load the saved model
-        vgae_model = torch.load(model_path)
-
+        vgae_model = VGAE(VariationalGCNEncoder(num_features, out_channels)).to(device)
+        vgae_model.load_state_dict(torch.load(model_path, map_location=device, weights_only=True))
         # Test the model on the test dataset
         AUC, AP = test_model(vgae_model, test_loader, device)
         print(f"AUC: {AUC}, AP: {AP}")
