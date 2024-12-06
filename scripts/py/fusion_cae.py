@@ -85,7 +85,7 @@ def fuse_proteins(device: torch.device, vgae_model_path: str, pae_model_path:str
 
 def get_loaders(protein_list: list[str], data_dir: str, batch_size, train_size=0.7, val_size=0.1, test_size=0.2):
     # Load the preprocessed data
-    print(f"loading data from {osp.join(data_dir, "fusion")}")
+    print(f"loading data from {osp.join(data_dir, 'fusion')}")
     dataset = SingleModeDataset([osp.join(data_dir, "fusion", p) for p in protein_list]) # Create a custom dataset from the loaded data
 
     # Split the dataset into train, validation, and test sets using random_split
