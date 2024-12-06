@@ -85,12 +85,16 @@ def fuse_proteins(device: torch.device, vgae_model_path: str, pae_model_path:str
 
 def get_loaders(protein_list: list[str], data_dir: str, batch_size, train_size=0.7, val_size=0.1, test_size=0.2):
     # Load the preprocessed data
+    print(f"loading data from {osp.join(data_dir, 'fusion')}")
     dataset = SingleModeDataset([osp.join(data_dir, "fusion", p) for p in protein_list]) # Create a custom dataset from the loaded data
 
     # Split the dataset into train, validation, and test sets using random_split
     train_dataset, val_dataset, test_dataset = torch.utils.data.random_split(
         dataset, [train_size, val_size, test_size], torch.Generator().manual_seed(1234)
     )
+    print(f"train data length: {len(train_dataset)}")
+    print(f"val data length: {len(val_dataset)}")
+    print(f"test data length: {len(test_dataset)}")
 
     # Create data loaders for training, validation, and test
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
@@ -134,7 +138,7 @@ def test(test_loader: torch.utils.data.DataLoader, model_path, criterion, device
                 
         average_loss = total_loss / len(test_loader)
 
-    print(f"Test Loss: {average_loss:.4f} of dataset of length {len(test_loader)}")
+    print(f"Test Loss: {average_loss:.4f}")
 
 def train(train_loader, val_loader, criterion, device, num_epochs, model_path):
     model = ConcreteAutoencoder(input_dim, shared_dim, latent_dim, temperature).to(device)
@@ -204,19 +208,19 @@ def main():
         fuse_proteins(device=device, vgae_model_path= vgae_path, pae_model_path=pae_path, data_dir=data_dir, protein_ids=protein_ids)
 
     if args.mode != "process":
-        train_data, valid_data, test_data = get_loaders(protein_ids, data_dir, batch_size)
+        train_loader, val_loader, test_loader = get_loaders(protein_ids, data_dir, batch_size)
         criterion = nn.MSELoss()
 
     if args.mode == "train":
-        train(train_loader=train_data, val_loader=valid_data, criterion=criterion, device=device, num_epochs=num_epochs, model_path=model_path)
+        train(train_loader=train_loader, val_loader=val_loader, criterion=criterion, device=device, num_epochs=num_epochs, model_path=model_path)
 
     if args.mode == "test":
-        test(test_loader=test_data, model_path=model_path, criterion=criterion, device=device)
+        test(test_loader=test_loader, model_path=model_path, criterion=criterion, device=device)
     
     if args.mode == "all":
         fuse_proteins(device=device, vgae_model_path=vgae_path, pae_model_path=pae_path, data_dir=data_dir, protein_ids=protein_ids)
-        train(train_loader=train_data, val_loader=valid_data, criterion=criterion, device=device, num_epochs=num_epochs, model_path=model_path)
-        test(test_loader=test_data, model_path=model_path, criterion=criterion, device=device)
+        train(train_loader=train_loader, val_loader=val_loader, criterion=criterion, device=device, num_epochs=num_epochs, model_path=model_path)
+        test(test_loader=test_loader, model_path=model_path, criterion=criterion, device=device)
 
 
 if __name__ == "__main__":
