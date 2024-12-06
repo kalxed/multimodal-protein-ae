@@ -11,7 +11,11 @@ from torch_geometric.loader import DataLoader
 from mpae.nn.vgae import *
 from mpae.utils.data import SingleModeDataset
 
-# from torch_geometric.data.data import DataEdgeAttr, DataTensorAttr
+from torch_geometric.data.data import DataEdgeAttr, DataTensorAttr
+
+torch.serialization.add_safe_globals([torch_geometric.data.data.DataEdgeAttr, 
+                                      torch_geometric.data.data.DataTensorAttr,
+                                      torch_geometric.data.storage.GlobalStorage])
 
 # Function to train the VGAE model
 def train(model, train_loader, optimizer, device):
