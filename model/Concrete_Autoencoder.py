@@ -23,23 +23,26 @@ class ConcreteDistribution(nn.Module):
         return y
 
 class ConcreteAutoencoder(nn.Module):
-    def __init__(self, input_dim, latent_dim, shared_dim=128, temperature=1.0, dropout_rate=0.1):
+    def __init__(self, input_dim, latent_dim, hidden_dim=640, temperature=1.0, dropout_rate=0.1):
         super(ConcreteAutoencoder, self).__init__()
+        
+        # Use hidden_dim if provided, else default to input_dim
+        hidden_dim = hidden_dim or input_dim
 
         # Encoder: Mapping input to latent space
         self.encoder = nn.Sequential(
-            nn.Linear(input_dim, shared_dim),
+            nn.Linear(input_dim, hidden_dim),
             nn.LeakyReLU(negative_slope=0.01),
             nn.Dropout(dropout_rate),  # Add dropout after ReLU
-            nn.Linear(shared_dim, latent_dim)
+            nn.Linear(hidden_dim, latent_dim)
         )
 
         # Decoder: Mapping latent space back to original input space
         self.decoder = nn.Sequential(
-            nn.Linear(latent_dim, shared_dim),
+            nn.Linear(latent_dim, hidden_dim),
             nn.LeakyReLU(negative_slope=0.01),
             nn.Dropout(dropout_rate),  # Add dropout after ReLU
-            nn.Linear(shared_dim, input_dim)
+            nn.Linear(hidden_dim, input_dim)
         )
         
         # Concrete distribution parameters

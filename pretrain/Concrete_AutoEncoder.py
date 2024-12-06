@@ -28,26 +28,26 @@ class MultimodalDataset(Dataset):
 # Load the preprocessed data
 
 # Uncomment to load the point cloud data from all .pt files
-# pointcloud_files = glob.glob('./data/multimodal/*.pt')
-# dataset = []
+pointcloud_files = glob.glob('./data/multimodal/*.pt')
+dataset = []
 
-# for file in pointcloud_files:
-#     data = torch.load(file, weights_only=False)
-#     dataset.append(data)
+for file in pointcloud_files:
+    data = torch.load(file, weights_only=False)
+    dataset.append(data)
 
 # Uncomment to load the fused data from a single pickle file
-with open("./data/pickles/fusion.pkl", "rb") as f:
-    print("Loading data ...")
-    dataset = pickle.load(f)
-print("Data loaded successfully.")
+# with open("./data/pickles/fusion.pkl", "rb") as f:
+#     print("Loading data ...")
+#     dataset = pickle.load(f)
+# print("Data loaded successfully.")
 
 # Create a custom dataset from the loaded data
 dataset = MultimodalDataset(dataset)
 
 # Split the dataset into train, validation, and test sets
-train_ratio = 0.8
+train_ratio = 0.7
 valid_ratio = 0.1
-test_ratio = 0.1
+test_ratio = 0.2
 
 train_size = int(len(dataset) * train_ratio)
 valid_size = int(len(dataset) * valid_ratio)
@@ -62,7 +62,7 @@ train_dataset, valid_dataset, test_dataset = torch.utils.data.random_split(
     dataset, [train_size, valid_size, test_size]
 )
 
-batch_size = 8
+batch_size = 256
 
 # Create data loaders for training, validation, and test
 train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
@@ -70,16 +70,16 @@ valid_loader = DataLoader(valid_dataset, batch_size=batch_size, shuffle=False)
 test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
 
 # Initialize the model with the temperature parameter
-input_dim = 640 * 3  # Input dimension after fusion
-shared_dim = 640  # Shared dimension after fusion
-latent_dim = 256  # Latent space size
-temperature = .8  # Concrete distribution temperature
+input_dim = 640  # Input dimension after fusion
+hidden_dim = 256  # Hidden layer size
+latent_dim = 64  # Latent space size
+temperature = .5  # Concrete distribution temperature
 
-model = ConcreteAutoencoder(input_dim, latent_dim, shared_dim, temperature).to(device)
+model = ConcreteAutoencoder(input_dim, latent_dim, hidden_dim, temperature).to(device)
 
 # Define loss function (MSE) and optimizer (Adam)
 criterion = nn.MSELoss()
-optimizer = torch.optim.Adam(model.parameters(), lr=0.0005, weight_decay=1e-5)
+optimizer = torch.optim.Adam(model.parameters(), lr=0.0001, weight_decay=1e-5)
 
 def train(model, train_data, optimizer, criterion, device):
     model.train()
@@ -126,14 +126,14 @@ def main():
     args = parser.parse_args()
 
     if args.mode == "train":
-        num_epochs = 100
+        num_epochs = 20
         for epoch in range(num_epochs):
             average_loss = train(model, train_loader, optimizer, criterion, device)
             print(f"Epoch {epoch+1}/{num_epochs}, Loss: {average_loss:.4f}")
 
-        # Validate the model
-        val_loss = eval(model, valid_loader, criterion, device)
-        print(f"Validation Loss: {val_loss:.4f}")
+            # Validate the model
+            val_loss = eval(model, valid_loader, criterion, device)
+            print(f"Validation Loss: {val_loss:.4f}")
 
         # Save trained model
         torch.save(model.state_dict(), "./data/models/Concrete.pt")

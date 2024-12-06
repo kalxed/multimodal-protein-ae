@@ -72,9 +72,6 @@ def process(device):
         total=len(sequence_files),
         desc="Processing modalities"
     ):
-        # Add check to confirm file names match
-        assert graph_file.split(".")[0] == pointcloud_file.split(".")[0] == sequence_file.split(".")[0]
-        
         # Load graph, point cloud, and sequence data
         graph = torch.load(os.path.join(graph_dir, graph_file), weights_only=False)
         point_cloud = torch.load(os.path.join(pointcloud_dir, pointcloud_file), weights_only=False)
@@ -101,24 +98,29 @@ def process(device):
             encoded_point_cloud = pae_model.encode(point_cloud[None, :]).squeeze().to("cpu")
             encoded_point_cloud = z_score_standardization(encoded_point_cloud)
         
-        # Calculate concatenated dimension dynamically
-        concatenated_data = torch.cat([encoded_sequence, encoded_graph, encoded_point_cloud], dim=0)
-        concatenated_dim = concatenated_data.size(0)  # Dynamic size based on concatenated data
+        input_dims = {"sequence": encoded_sequence.shape[0], "graph": encoded_graph.shape[0], "point_cloud": encoded_point_cloud.shape[0]}
+        shared_dim = 640
+        attention_fusion = AttentionFusion(input_dims, shared_dim)
 
-        # Apply a linear projection to the concatenated data
-        projection_layer = nn.Linear(concatenated_dim, shared_dim).to(device)
-        projected_data = projection_layer(concatenated_data)
+        fused_rep, _ = attention_fusion(encoded_sequence, encoded_graph, encoded_point_cloud)
+        
+        # # Calculate concatenated dimension dynamically
+        # concatenated_data = torch.cat([encoded_sequence, encoded_graph, encoded_point_cloud], dim=0)
+        # concatenated_dim = concatenated_data.size(0)  # Dynamic size based on concatenated data
 
-        # Save the projected data (this is the new representation after concatenation and projection)
-        processed_data_list.append(projected_data)
+        # # Apply a linear projection to the concatenated data
+        # projection_layer = nn.Linear(concatenated_dim, shared_dim).to(device)
+        # projected_data = projection_layer(concatenated_data)
         
         # Uncomment to save each fused data object individually
-        # fused_data_filename = f"./data/multimodal/{graph_file.split('.')[0]}.pt"
-        # torch.save(projected_data, fused_data_filename)
+        fused_data_filename = f"./data/multimodal/{graph_file.split('.')[0]}.pt"
+        torch.save(fused_rep, fused_data_filename)
+        
+        # Uncomment next three lines to save the processed data list as a pickle file
+        # processed_data_list.append(projected_data)
 
-    # Uncomment to save the processed data list as a pickle file
-    with open(f"./data/pickles/fusion.pkl", "wb") as f:
-        pickle.dump(processed_data_list, f)
+    # with open(f"./data/pickles/fusion.pkl", "wb") as f:
+    #     pickle.dump(processed_data_list, f)
     
     print("Attention Fusion Completed Successfully.")
         
@@ -126,17 +128,17 @@ def load_data():
     # Load the preprocessed data
     
     # Uncomment to load the fused data from a single pickle file
-    with open("./data/pickles/fusion.pkl", "rb") as f:
-        print("Loading data ...")
-        dataset = pickle.load(f)
+    # with open("./data/pickles/fusion.pkl", "rb") as f:
+    #     print("Loading data ...")
+    #     dataset = pickle.load(f)
     
     # Uncomment to load data from all .pt files
-    # pointcloud_files = glob.glob('./data/multimodal/*.pt')
-    # dataset = []
+    pointcloud_files = glob.glob('./data/multimodal/*.pt')
+    dataset = []
 
-    # for file in pointcloud_files:
-    #     data = torch.load(file, weights_only=False)
-    #     dataset.append(data)    
+    for file in pointcloud_files:
+        data = torch.load(file, weights_only=False)
+        dataset.append(data)    
 
     dataset = MultimodalDataset(dataset) # Create a custom dataset from the loaded data
     print("Data loaded successfully.")
