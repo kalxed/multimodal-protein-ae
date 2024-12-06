@@ -138,7 +138,7 @@ def test(test_loader: torch.utils.data.DataLoader, model_path, criterion, device
                 
         average_loss = total_loss / len(test_loader)
 
-    print(f"Test Loss: {average_loss:.4f} of dataset of length {len(test_loader)}")
+    print(f"Test Loss: {average_loss:.4f}")
 
 def train(train_loader, val_loader, criterion, device, num_epochs, model_path):
     model = ConcreteAutoencoder(input_dim, shared_dim, latent_dim, temperature).to(device)
