@@ -155,9 +155,9 @@ dmypy.json
 cython_debug/
 
 # Files to ignore
-data/*
-*.pt
-*.pkl
+data/
+proteins
+.vscode/
 
 **/.DS_Store
 /log
