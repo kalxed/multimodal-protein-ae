@@ -7,6 +7,7 @@ from torch_geometric.data import Data
 from torch_geometric.utils import negative_sampling
 from sklearn.preprocessing import LabelEncoder
 import warnings
+import collections
 warnings.filterwarnings("ignore")
 import random
 random.seed(42)
@@ -55,30 +56,101 @@ from model.vgae import *
 from model.PAE import *
 from model.Attention import *
 
-def load_models():  
-    # Load pre-trained models
-    vgae_model = torch.load(f"./data/models/VGAE.pt", map_location=device)
-    pae_model = torch.load(f"./data/models/PAE.pt", map_location=device)
+import torch
+import collections
+import transformers
+
+def load_models():
+    # Ititialize VGAE model
+    out_channels = 10
+    num_features = 20
+    vgae_model_path = "./data/models/VGAE.pt"
+    vgae_model = VGAE(VariationalGCNEncoder(num_features, out_channels))
+    
+    state_dict = torch.load(vgae_model_path, map_location=device)
+    if isinstance(state_dict, collections.OrderedDict):
+        vgae_model.load_state_dict(state_dict)
+    else:
+        raise ValueError("The VGAE file does not contain a valid state dictionary.")
+
+    # Load PAE model
+    k = 640
+    num_points = 2048
+    pae_model_path = "./data/models/PAE.pt"
+    pae_model = PointAutoencoder(k, num_points)
+    
+    state_dict = torch.load(pae_model_path, map_location=device)
+    if isinstance(state_dict, collections.OrderedDict):
+        pae_model.load_state_dict(state_dict)
+    else:
+        raise ValueError("The PAE file does not contain a valid state dictionary.")
+    
+    # Load ESM model
     model_token = "facebook/esm2_t30_150M_UR50D"
     esm_model = transformers.AutoModelForMaskedLM.from_pretrained(model_token)
     esm_model = esm_model.to(device)
-    concrete_model = torch.load(f"./data/models/Concrete.pt", map_location=device)
+    
+    # Load CAE model
+    input_dim = 640 * 3  # Input dimension after fusion
+    shared_dim = 640  # Shared dimension after fusion
+    latent_dim = 64  # Latent space size
+    temperature = .5  # Concrete distribution temperature
+    concrete_model_path = "./data/models/CAE.pt"
+    concrete_model = ConcreteAutoencoder(input_dim, shared_dim, latent_dim, temperature).to(device)
+    state_dict = torch.load(concrete_model_path, map_location=device)
+    if isinstance(state_dict, collections.OrderedDict):
+        concrete_model.load_state_dict(state_dict)
+    else:
+        raise ValueError("The CAE file does not contain a valid state dictionary.")
+    
     print("Pre-trained models loaded successfully.")
     return vgae_model, pae_model, esm_model, concrete_model
 
-def pickle_dump(data_folder, mulmodal, sequence, graph, point_cloud):
-    with open(f'{data_folder}/multimodal.pkl', 'wb') as f:
+
+# def load_models():  
+#     # Load pre-trained models
+#     vgae_model = torch.load(f"./data/models/VGAE.pt", map_location=device)
+#     if isinstance(vgae_model, collections.OrderedDict):
+#         vgae_model.load_state_dict(torch.load(f"./data/models/VGAE.pt", map_location=device))
+    
+#     pae_model = torch.load(f"./data/models/PAE.pt", map_location=device)
+#     if isinstance(pae_model, collections.OrderedDict):
+#         pae_model.load_state_dict(torch.load(f"./data/models/PAE.pt", map_location=device))
+    
+#     model_token = "facebook/esm2_t30_150M_UR50D"
+#     esm_model = transformers.AutoModelForMaskedLM.from_pretrained(model_token)
+#     esm_model = esm_model.to(device)
+    
+#     concrete_model = torch.load(f"./data/models/CAE.pt", map_location=device)
+#     if isinstance(concrete_model, collections.OrderedDict):
+#         concrete_model.load_state_dict(torch.load(f"./data/models/CAE.pt", map_location=device))
+    
+#     print("Pre-trained models loaded successfully.")
+#     return vgae_model, pae_model, esm_model, concrete_model
+
+def pickle_dump(batch_num, data_folder, mulmodal, sequence, graph, point_cloud):
+    # Create directories if they do not exist
+    if not os.path.exists(f'{data_folder}/multimodal'):
+        os.makedirs(f'{data_folder}/multimodal')
+    if not os.path.exists(f'{data_folder}/sequences'):
+        os.makedirs(f'{data_folder}/sequences')
+    if not os.path.exists(f'{data_folder}/graphs'):
+        os.makedirs(f'{data_folder}/graphs')
+    if not os.path.exists(f'{data_folder}/pointclouds'):
+        os.makedirs(f'{data_folder}/pointclouds')
+    
+    # Save the features to pickle files    
+    with open(f'{data_folder}/multimodal/{batch_num}.pkl', 'wb') as f:
         pickle.dump(mulmodal, f)
 
-    with open(f'{data_folder}/sequence.pkl', 'wb') as f:
+    with open(f'{data_folder}/sequences/{batch_num}.pkl', 'wb') as f:
         pickle.dump(sequence, f)
 
-    with open(f'{data_folder}/graph.pkl', 'wb') as f:
+    with open(f'{data_folder}/graphs/{batch_num}.pkl', 'wb') as f:
         pickle.dump(graph, f)
 
-    with open(f'{data_folder}/point_cloud.pkl', 'wb') as f:
+    with open(f'{data_folder}/pointclouds/{batch_num}.pkl', 'wb') as f:
         pickle.dump(point_cloud, f)
-    print("Features saved successfully.")
 
 def one_hot_encode_amino_acid(sequence):
     amino_acids = list(range(20))
