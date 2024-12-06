@@ -4,7 +4,6 @@ import os.path as osp
 
 import numpy as np
 import torch
-import transformers
 from Bio.PDB import MMCIFParser, PDBParser, Polypeptide
 from sklearn.neighbors import radius_neighbors_graph
 from sklearn.preprocessing import LabelEncoder
