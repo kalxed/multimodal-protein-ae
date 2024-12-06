@@ -62,7 +62,7 @@ def test_model(model, test_loader, device):
 def main():
     parser = argparse.ArgumentParser(description="Train the Variational Graph Autoencoder (VGAE)")
     parser.add_argument("--mode", choices=["train", "test"], help="Select mode: train or test", required=True)
-    parser.add_argument("--model-path", default="models/graph.pt", type=str,dest="model_path",
+    parser.add_argument("--model-path", default="models/VGAE.pt", type=str,dest="model_path",
                         help="where store the trained model, or where to load the model from for testing")
     parser.add_argument("--id-file", default="proteins", help="file containing all the protein ids",type=str, dest="id_file")
     parser.add_argument("--data-dir", default="data/graphs",help = "directory containing the graph files", type=str, dest="data_dir")
