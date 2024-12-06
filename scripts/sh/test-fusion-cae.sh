@@ -10,6 +10,6 @@ source ~/miniconda3/bin/activate dlprotproj
 
 python scripts/py/fusion_cae.py --mode test --pae-path models/PAE-200.pt --id-file fused-proteins
 
-echo "Done training"
+echo "Done Testing"
 
 exit 0
