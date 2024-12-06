@@ -4,7 +4,7 @@ import pandas as pd
 import sys
 from tqdm import tqdm
 from rdkit import Chem
-from rdkit.Chem import AllChem
+from rdkit.Chem import rdFingerprintGenerator
 from utils import *
 sys.path.append(".")
 from model.ESM import *
@@ -26,31 +26,14 @@ class ExactGPModel(gpytorch.models.ExactGP):
         covar_x = self.covar_module(x)
         return gpytorch.distributions.MultivariateNormal(mean_x, covar_x)
 
-from rdkit.Chem import rdFingerprintGenerator
-
 def get_ligand_representation(ligand_smiles):
-    # Convert SMILES to RDKit molecule object
     mol = Chem.MolFromSmiles(ligand_smiles)
     if mol is None:
         raise ValueError(f"Invalid SMILES: {ligand_smiles}")
-
-    # Create a Morgan fingerprint generator
     generator = rdFingerprintGenerator.GetMorganGenerator(fpSize=1024, radius=2)
-    
-    # Generate the fingerprint
     fingerprint = generator.GetFingerprint(mol)
-    
-    # Convert fingerprint to tensor
     fingerprint_tensor = torch.tensor(fingerprint, dtype=torch.float32)
     return fingerprint_tensor
-
-# def get_ligand_representation(ligand_smiles):
-#     mol = Chem.MolFromSmiles(ligand_smiles)
-#     fingerprint = AllChem.GetMorganFingerprintAsBitVect(
-#         mol, 2, nBits=1024
-#     )  # Change radius as needed
-#     fingerprint_tensor = torch.tensor(fingerprint, dtype=torch.float32)
-#     return fingerprint_tensor
 
 def process(dataset_name):
     """
@@ -68,6 +51,8 @@ def process(dataset_name):
     sequence = []
     graph = []
     point_cloud = []
+    batch_size = 250  # Number of samples to process in each batch
+    batch_counter = 0  # Keep track of batch number
 
     # Iterate through the dataset to process each sample
     for i, (ligand_smiles, protein_name) in tqdm(
@@ -91,30 +76,30 @@ def process(dataset_name):
         sequence.append(sequence_feature)
         graph.append(graph_feature)
         point_cloud.append(point_cloud_feature)
+        
+        # Save and reset data after reaching the batch size
+        if (i + 1) % batch_size == 0 or (i + 1) == len(df):
+            batch_counter += 1
+            # batch_file_prefix = f"{data_folder}/batch_{batch_counter}"
+            pickle_dump(batch_counter, data_folder, mulmodal, sequence, graph, point_cloud)
 
-    # Save the features to pickle files
-    pickle_dump(data_folder, mulmodal, sequence, graph, point_cloud)
-    # with open(f'{data_folder}/multimodal.pkl', 'wb') as f:
-    #     pickle.dump(mulmodal, f)
+            # Clear lists to free up memory
+            mulmodal.clear()
+            sequence.clear()
+            graph.clear()
+            point_cloud.clear()
 
-    # with open(f'{data_folder}/sequence.pkl', 'wb') as f:
-    #     pickle.dump(sequence, f)
+    print("Features processed successfully.")
 
-    # with open(f'{data_folder}/graph.pkl', 'wb') as f:
-    #     pickle.dump(graph, f)
-
-    # with open(f'{data_folder}/point_cloud.pkl', 'wb') as f:
-    #     pickle.dump(point_cloud, f)
-
-def setup(dataset):
-    data_folder = f'./downstreamtasks/data/{dataset}'
+def setup(dataset, modal):
+    data_folder = f'./downstreamtasks/{dataset}'
 
     # Read the label CSV file
     df = pd.read_csv(f'{data_folder}/label.csv')
     print("Number of samples:", len(df))
 
     # Load feature data from the selected modality
-    with open(f'{data_folder}/align_fusion.pkl', 'rb') as f:
+    with open(f'{data_folder}/{modal}.pkl', 'rb') as f:
         tensor_list = pickle.load(f)
         data = [tensor.detach().numpy() for tensor in tensor_list]
         X = np.array(data)
