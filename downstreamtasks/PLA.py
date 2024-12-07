@@ -13,7 +13,7 @@ from model.PAE import *
 import gpytorch
 import ast
 
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+# device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 class ExactGPModel(gpytorch.models.ExactGP):
     def __init__(self, X_train, y_train, likelihood):
@@ -93,7 +93,7 @@ def process(dataset_name):
     print("Features processed successfully.")
 
 def setup(dataset, modal):
-    data_folder = f'./downstreamtasks/{dataset}'
+    data_folder = f'../downstreamtasks/{dataset}'
 
     # Read the label CSV file
     df = pd.read_csv(f'{data_folder}/label.csv')
@@ -139,7 +139,7 @@ def setup(dataset, modal):
 
 def train(dataset, modal):
     # Define optimizer and loss
-    model, X_train, y_train, X_test, y_test, likelihood, data_folder = setup(dataset)
+    model, X_train, y_train, X_test, y_test, likelihood, data_folder = setup(dataset, modal)
     optimizer = torch.optim.Adam(model.parameters(), lr=0.25)
     mll = gpytorch.mlls.ExactMarginalLogLikelihood(likelihood, model)
 

@@ -38,11 +38,6 @@ else:
 model_token = "facebook/esm2_t30_150M_UR50D"
 tokenizer = transformers.AutoTokenizer.from_pretrained(model_token)
 
-amino_acids = "ACDEFGHIKLMNPQRSTVWYX"
-label_encoder = LabelEncoder()
-label_encoder.fit(list(amino_acids))
-num_amino_acids = len(amino_acids)
-
 parser = PDBParser(QUIET=True)
 ppb = PPBuilder()
 
@@ -70,6 +65,7 @@ def load_models():
     state_dict = torch.load(vgae_model_path, map_location=device)
     if isinstance(state_dict, collections.OrderedDict):
         vgae_model.load_state_dict(state_dict)
+        vgae_model.eval()
     else:
         raise ValueError("The VGAE file does not contain a valid state dictionary.")
 
@@ -82,6 +78,7 @@ def load_models():
     state_dict = torch.load(pae_model_path, map_location=device)
     if isinstance(state_dict, collections.OrderedDict):
         pae_model.load_state_dict(state_dict)
+        pae_model.eval()
     else:
         raise ValueError("The PAE file does not contain a valid state dictionary.")
     
@@ -100,35 +97,27 @@ def load_models():
     state_dict = torch.load(concrete_model_path, map_location=device)
     if isinstance(state_dict, collections.OrderedDict):
         concrete_model.load_state_dict(state_dict)
+        concrete_model.eval()
     else:
         raise ValueError("The CAE file does not contain a valid state dictionary.")
     
     print("Pre-trained models loaded successfully.")
     return vgae_model, pae_model, esm_model, concrete_model
 
+def pickle_dump(data_folder, mulmodal, sequence, graph, point_cloud):
+    with open(f'{data_folder}/multimodal.pkl', 'wb') as f:
+        pickle.dump(mulmodal, f)
 
-# def load_models():  
-#     # Load pre-trained models
-#     vgae_model = torch.load(f"./data/models/VGAE.pt", map_location=device)
-#     if isinstance(vgae_model, collections.OrderedDict):
-#         vgae_model.load_state_dict(torch.load(f"./data/models/VGAE.pt", map_location=device))
-    
-#     pae_model = torch.load(f"./data/models/PAE.pt", map_location=device)
-#     if isinstance(pae_model, collections.OrderedDict):
-#         pae_model.load_state_dict(torch.load(f"./data/models/PAE.pt", map_location=device))
-    
-#     model_token = "facebook/esm2_t30_150M_UR50D"
-#     esm_model = transformers.AutoModelForMaskedLM.from_pretrained(model_token)
-#     esm_model = esm_model.to(device)
-    
-#     concrete_model = torch.load(f"./data/models/CAE.pt", map_location=device)
-#     if isinstance(concrete_model, collections.OrderedDict):
-#         concrete_model.load_state_dict(torch.load(f"./data/models/CAE.pt", map_location=device))
-    
-#     print("Pre-trained models loaded successfully.")
-#     return vgae_model, pae_model, esm_model, concrete_model
+    with open(f'{data_folder}/sequence.pkl', 'wb') as f:
+        pickle.dump(sequence, f)
 
-def pickle_dump(batch_num, data_folder, mulmodal, sequence, graph, point_cloud):
+    with open(f'{data_folder}/graph.pkl', 'wb') as f:
+        pickle.dump(graph, f)
+
+    with open(f'{data_folder}/point_cloud.pkl', 'wb') as f:
+        pickle.dump(point_cloud, f)
+        
+def pickle_batch_dump(batch_num, data_folder, mulmodal, sequence, graph, point_cloud):
     # Create directories if they do not exist
     if not os.path.exists(f'{data_folder}/multimodal'):
         os.makedirs(f'{data_folder}/multimodal')
@@ -151,11 +140,32 @@ def pickle_dump(batch_num, data_folder, mulmodal, sequence, graph, point_cloud):
 
     with open(f'{data_folder}/pointclouds/{batch_num}.pkl', 'wb') as f:
         pickle.dump(point_cloud, f)
-
-def one_hot_encode_amino_acid(sequence):
-    amino_acids = list(range(20))
+        
+def get_aa_label_encoder(file_type):
+    if file_type == "pdb":
+        amino_acids = list(range(20))
+    elif file_type == "hdf5":
+        amino_acids = [
+            'A', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'K', 'L',
+            'M', 'N', 'P', 'Q', 'R', 'S', 'T', 'V', 'W', 'Y'
+        ]
+    else:
+        raise ValueError("Invalid file type. Please choose from 'pdb' or 'hdf5'.")
+    
     label_encoder = LabelEncoder()
-    label_encoder.fit(amino_acids)
+    label_encoder.fit(list(amino_acids))
+    return label_encoder, amino_acids
+
+def one_hot_encode_amino_acid(sequence, file_type):
+    label_encoder, amino_acids = get_aa_label_encoder(file_type)
+    
+    # Ensure the sequence contains only valid amino acids
+    try:
+        amino_acid_indices = label_encoder.transform(list(sequence))
+    except ValueError as e:
+        print(f"Invalid amino acid in sequence: {e}")
+        return None  # Skip invalid sequences
+    
     num_amino_acids = len(amino_acids)
     amino_acid_indices = label_encoder.transform(list(sequence))
     one_hot = np.zeros((len(sequence), num_amino_acids), dtype=np.float32)
@@ -183,7 +193,7 @@ def read_pdb(pdb_path):
             sequence += str(aa_code)
             coordinates.append(residue['CA'].get_coord())        
     coordinates = np.array(coordinates, dtype=np.float32)
-    node_features = one_hot_encode_amino_acid(sequence)
+    node_features = one_hot_encode_amino_acid(sequence, "pdb")
     x = torch.tensor(node_features, dtype=torch.float32)
     edge_index = radius_neighbors_graph(coordinates, radius, mode='connectivity', include_self='auto')
     edge_index = edge_index.nonzero()
@@ -196,20 +206,13 @@ def read_pdb(pdb_path):
     )
     graph = Data(x=x, edge_index=edge_index, neg_edge_index=neg_edge_index)
 
-        # Point Cloud
+    # Point Cloud
     desired_num_points = 2048
     coordinates = np.zeros((desired_num_points, 3))
     for i, atom in enumerate(structure.get_atoms()):
         if i == desired_num_points:
             break
         coordinates[i] = atom.get_coord()
-    # coordinates = np.array(coordinates, dtype=np.float32)
-    # num_points = coordinates.shape[0]
-    # if num_points < desired_num_points:
-    #     padding = np.zeros((desired_num_points - num_points, 3), dtype=np.float32)
-    #     coordinates = np.concatenate((coordinates, padding), axis=0)
-    # elif num_points > desired_num_points:
-    #     coordinates = coordinates[:desired_num_points, :]
     coordinates = torch.tensor(coordinates, dtype=torch.float32)
     coordinates -= coordinates.mean(0)
     d = np.sqrt((coordinates ** 2).sum(1))
@@ -252,7 +255,7 @@ def get_modalities(protein_path, ESM, VGAE, PAE, Fusion):
 
     # Initialize AttentionFusion
     input_dims = {"sequence": encoded_sequence.shape[0], "graph": encoded_graph.shape[0], "point_cloud": encoded_point_cloud.shape[0]}
-    shared_dim = 640
+    shared_dim = 640 * 3
     attention_fusion = AttentionFusion(input_dims, shared_dim)
 
     fused_rep, _ = attention_fusion(encoded_sequence, encoded_graph, encoded_point_cloud)
@@ -291,7 +294,13 @@ def process_encoded_graph(encoded_graph, edge_index, fixed_size=640, feature_dim
 
     return processed_encoded_graph[:fixed_size]
 
-
+# Standard amino acid mapping
+amino_acid_mapping = {
+        'A': 0, 'C': 1, 'D': 2, 'E': 3, 'F': 4,
+        'G': 5, 'H': 6, 'I': 7, 'K': 8, 'L': 9,
+        'M': 10, 'N': 11, 'P': 12, 'Q': 13, 'R': 14,
+        'S': 15, 'T': 16, 'V': 17, 'W': 18, 'Y': 19
+    }
 
 def read_hdf5(hdf5_path):
     hdf5_file = h5py.File(hdf5_path, "r")
@@ -299,7 +308,13 @@ def read_hdf5(hdf5_path):
     amino_acid_indices = hdf5_file["amino_types"][:]
     amino_acid_indices[amino_acid_indices > 20] = 20
     amino_acid_indices[amino_acid_indices == -1] = 20
-    sequence = "".join(label_encoder.inverse_transform(amino_acid_indices))
+    label_encoder, amino_acids = get_aa_label_encoder("hdf5")
+    try:
+        sequence = "".join(label_encoder.inverse_transform(amino_acid_indices))
+    except ValueError as e:
+        print(f"Error converting amino acid indices: {e}")
+        return None, None, None
+    
     sequence_token = tokenizer(
         sequence, return_tensors="pt", padding=True, truncation=True, max_length=2048
     )["input_ids"]
@@ -307,7 +322,7 @@ def read_hdf5(hdf5_path):
     # Graph Processing
     amino_pos = hdf5_file["amino_pos"][:]
     coordinates = np.array(amino_pos, dtype=np.float32).squeeze()
-    node_features = one_hot_encode_amino_acid(sequence)
+    node_features = one_hot_encode_amino_acid(sequence, "hdf5")
     x = torch.tensor(node_features, dtype=torch.float32)
     edge_index = radius_neighbors_graph(coordinates, radius=6.0, mode='connectivity', include_self='auto')
     edge_index = edge_index.nonzero()

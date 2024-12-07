@@ -4,23 +4,26 @@ import pickle
 import os
 import pandas as pd
 import sys
-import tqdm
+from tqdm import tqdm
 from utils import *
 sys.path.append(".")
 from model.ESM import *
 from model.vgae import *
 from model.PAE import *
+from sklearn.metrics import accuracy_score
 
 from sklearn.model_selection import GroupKFold
 import xgboost as xgb
 from xgboost import XGBClassifier
 
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
 def process():
     # Define the script directory and data folder
     vgae_model, pae_model, esm_model, concrete_model = load_models()
-    data_folder = './downstreamtasks/data/ProtDD'
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    target_dir = os.path.join(script_dir, "..", "data", "ProtDD")
+
+    # Normalize the path (resolve "..")
+    data_folder = os.path.abspath(target_dir)
 
     # Attempt to read label.csv
     try:
@@ -55,10 +58,13 @@ def process():
 
     # Iterate through the HDF5 files and extract multimodal representations
     for i, hdf5_file in tqdm(enumerate(df['id']), total=len(df['id'])):
-        hdf5_path = f'/{data_folder}/hdf5/{hdf5_file}.hdf5'
+        hdf5_path = f'/{data_folder}/data/{hdf5_file}.hdf5'
         
         # Get multimodal representations from the HDF5 file using pre-trained models
         multimodal_representation, encoded_sequence, encoded_graph, encoded_point_cloud = get_modalities(hdf5_path, esm_model, vgae_model, pae_model, concrete_model)
+        
+        if encoded_sequence is None:
+            continue
         
         # Append the representations to their respective lists
         mulmodal.append(multimodal_representation.detach().numpy())
