@@ -14,6 +14,7 @@ from torch_geometric.utils import negative_sampling
 from mpae.nn.attention import AttentionFusion
 from mpae.nn import esm
 from mpae.nn.pae import PointAutoencoder
+from torch_geometric.nn import TopKPooling
 
 
 def tokenize_sequence(seq: str, padding=True) -> torch.Tensor:
@@ -134,6 +135,22 @@ def z_score_standardization(tensor):
     standardized_tensor = (tensor - mean) / std
     return standardized_tensor
 
+def process_encoded_graph(encoded_graph, edge_index, fixed_size=640, feature_dim=10):
+    num_nodes = encoded_graph.size(0)
+    if num_nodes > fixed_size:
+        ratio = fixed_size / num_nodes
+        with torch.no_grad():
+            pooling_layer = TopKPooling(in_channels=feature_dim, ratio=ratio)
+            pooled_x, edge_index, edge_attr, batch, perm, score = pooling_layer(encoded_graph, edge_index)
+        processed_encoded_graph = pooled_x
+    else:
+        padding_size = fixed_size - num_nodes
+        zero_padding = torch.zeros(padding_size, feature_dim)
+        processed_encoded_graph = torch.cat((encoded_graph, zero_padding), dim=0)
+    return processed_encoded_graph
+
+
+
 def fuse_with_attention(graph: Data, tokenized_seq: torch.Tensor, pointcloud: Data, vgae_model: VGAE, pae_model: PointAutoencoder, device, shared_dim: int):
     # Encode sequence data using ESM
     vgae_model = vgae_model.to(device)
@@ -141,14 +158,15 @@ def fuse_with_attention(graph: Data, tokenized_seq: torch.Tensor, pointcloud: Da
     esm_model = esm.esm_model.to(device)
     with torch.no_grad():
         tokenized_seq = tokenized_seq.to(device)
-        encoded_sequence = esm_model(tokenized_seq, output_hidden_states=True)["hidden_states"
-        ][-1][0, -1].to(device)
+        encoded_sequence = esm_model(tokenized_seq, output_hidden_states=True)["hidden_states"][-1][0, -1].to(device)
         encoded_sequence = z_score_standardization(encoded_sequence)
 
     # Encode graph data using VGAE
     with torch.no_grad():
         graph = graph.to(device)
+        vgae_model.eval()
         encoded_graph = vgae_model.encode(graph.x, graph.edge_index).to(device)
+        encoded_graph = process_encoded_graph(encoded_graph, encoded_graph.edge_index)
         encoded_graph = torch.mean(encoded_graph, dim=1)
         encoded_graph = z_score_standardization(encoded_graph)
 
@@ -159,16 +177,6 @@ def fuse_with_attention(graph: Data, tokenized_seq: torch.Tensor, pointcloud: Da
         encoded_point_cloud = pae_model.encode(pointcloud[None, :]).squeeze()#.to("cpu")
         encoded_point_cloud = z_score_standardization(encoded_point_cloud)
 
-    attention_fusion = AttentionFusion(
-        input_dims={"sequence": encoded_sequence.shape[0], "graph": encoded_graph.shape[0], "point_cloud": encoded_point_cloud.shape[0]},
-        shared_dim=shared_dim
-    ).to(device)
-    
-    # Perform attention-based fusion using learned projections
-    fused_data = attention_fusion(
-        encoded_sequence.to(device),
-        encoded_graph.to(device),
-        encoded_point_cloud.to(device),
-    )
+    fused_data = torch.cat((encoded_sequence, encoded_graph, encoded_point_cloud), dim=0)
     
     return fused_data
