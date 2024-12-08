@@ -33,7 +33,7 @@ def z_score_standardization(tensor: torch.Tensor):
         standardized_tensor = tensor  # Handle the case when std is 0
     return standardized_tensor
 
-def fuse_proteins(device: torch.device, vgae_model_path: str, pae_model_path:str, data_dir: str, protein_ids: list[str]):
+def fuse_proteins(device: torch.device, vgae_model_path: str, pae_model_path:str, data_dir: str, protein_ids: list[str], out_dir:str="fusion"):
     """perform attention-based fusion
 
     For each protein, fuse the graph, point cloud, and sequence into a single representation
@@ -124,7 +124,7 @@ def test(test_loader: torch.utils.data.DataLoader, model_path, criterion, device
     if len(test_loader) == 0:
         average_loss = torch.nan
     else:
-        model = ConcreteAutoencoder(input_dim, shared_dim, latent_dim, temperature).to(device)
+        model = ConcreteAutoencoder(input_dim=input_dim, hidden_dim=shared_dim, latent_dim=latent_dim, temperature=temperature).to(device)
         model.load_state_dict(torch.load(model_path, weights_only=True))
         model.to(device)
         model.eval()
@@ -141,7 +141,7 @@ def test(test_loader: torch.utils.data.DataLoader, model_path, criterion, device
     print(f"Test Loss: {average_loss:.4f}")
 
 def train(train_loader, val_loader, criterion, device, num_epochs, model_path):
-    model = ConcreteAutoencoder(input_dim, shared_dim, latent_dim, temperature).to(device)
+    model = ConcreteAutoencoder(input_dim=input_dim, hidden_dim=shared_dim, latent_dim=latent_dim, temperature=temperature).to(device)
 
     # Define optimizer (Adam)
     optimizer = torch.optim.Adam(model.parameters(), lr=0.0001, weight_decay=1e-5)
@@ -187,6 +187,7 @@ def main():
     parser.add_argument("--data-dir", default="data/",help = "directory containing the graph files", type=str, dest="data_dir")
     parser.add_argument("--epochs", default=100, help="number of epochs to train for. only applicable when mode=train", type=int)
     parser.add_argument("--batch-size", default=64, help="batch size for training", type=int, dest="batch_size")
+    parser.add_argument("--data-out-dir", default="fusion",type=str, dest="data_out")
 
     args = parser.parse_args()
     model_path = args.model_path
@@ -197,6 +198,7 @@ def main():
     
     num_epochs = args.epochs
     batch_size = args.batch_size
+    data_out = args.data_out
 
     with open(id_file, 'r') as f:
         protein_ids = [pid.strip() for pid in f.readlines()]
@@ -214,7 +216,7 @@ def main():
             first_file = files_to_process * task_idx
             last_file = len(protein_ids) if task_idx == (ntasks - 1) else (first_file + files_to_process)
             protein_ids = protein_ids[first_file:last_file]
-        fuse_proteins(device=device, vgae_model_path= vgae_path, pae_model_path=pae_path, data_dir=data_dir, protein_ids=protein_ids)
+        fuse_proteins(device=device, vgae_model_path= vgae_path, pae_model_path=pae_path, data_dir=data_dir, protein_ids=protein_ids, data_dir=data_out)
 
     if args.mode != "process":
         train_loader, val_loader, test_loader = get_loaders(protein_ids, data_dir, batch_size)

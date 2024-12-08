@@ -23,7 +23,7 @@ class ConcreteDistribution(nn.Module):
         return y
 
 class ConcreteAutoencoder(nn.Module):
-    def __init__(self, input_dim, latent_dim, attention_dim=1024, hidden_dim=640, temperature=1.0, dropout_rate=0.1):
+    def __init__(self, input_dim, latent_dim, hidden_dim=640, temperature=1.0, dropout_rate=0.1):
         super(ConcreteAutoencoder, self).__init__()
         
         # Use hidden_dim if provided, else default to input_dim
@@ -31,7 +31,7 @@ class ConcreteAutoencoder(nn.Module):
 
         # Encoder: Mapping input to latent space
         self.encoder = nn.Sequential(
-            nn.Linear(attention_dim, hidden_dim),
+            nn.Linear(input_dim, hidden_dim),
             nn.LeakyReLU(negative_slope=0.01),
             nn.Dropout(dropout_rate),  # Add dropout after ReLU
             nn.Linear(hidden_dim, latent_dim)
@@ -44,12 +44,12 @@ class ConcreteAutoencoder(nn.Module):
             nn.Dropout(dropout_rate),  # Add dropout after ReLU
             nn.Linear(hidden_dim, input_dim)
         )
-        
+
         # Concrete distribution parameters
         self.temperature = temperature
         self.concrete = ConcreteDistribution(temperature=self.temperature, hard=False)
         
-        self.attention = nn.MultiheadAttention(embed_dim=attention_dim, num_heads=4)
+        self.attention = nn.MultiheadAttention(embed_dim=input_dim, num_heads=4)
         # Apply weight initialization
         self.apply(self.init_weights)
 
@@ -70,7 +70,7 @@ class ConcreteAutoencoder(nn.Module):
         fused_rep: The representation coming from the attention fusion of multiple modalities
         """
         # Encoder produces logits
-        attention_rep = self.attention(fused_rep)
+        attention_rep, _ = self.attention(fused_rep, fused_rep, fused_rep)
 
         encoded = self.encoder(attention_rep)
         
