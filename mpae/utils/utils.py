@@ -134,7 +134,7 @@ def z_score_standardization(tensor):
     standardized_tensor = (tensor - mean) / std
     return standardized_tensor
 
-def fuse_with_attention(graph: Data, tokenized_seq: torch.Tensor, pointcloud: Data, vgae_model: VGAE, pae_model: PointAutoencoder, device, modality_dim: int, shared_dim: int):
+def fuse_with_attention(graph: Data, tokenized_seq: torch.Tensor, pointcloud: Data, vgae_model: VGAE, pae_model: PointAutoencoder, device, shared_dim: int):
     # Encode sequence data using ESM
     vgae_model = vgae_model.to(device)
     pae_model = pae_model.to(device)
@@ -160,7 +160,7 @@ def fuse_with_attention(graph: Data, tokenized_seq: torch.Tensor, pointcloud: Da
         encoded_point_cloud = z_score_standardization(encoded_point_cloud)
 
     attention_fusion = AttentionFusion(
-        input_dims={"sequence": modality_dim, "graph": modality_dim, "point_cloud": modality_dim},
+        input_dims={"sequence": encoded_sequence.shape[0], "graph": encoded_graph.shape[0], "point_cloud": encoded_point_cloud.shape[0]},
         shared_dim=shared_dim
     ).to(device)
     

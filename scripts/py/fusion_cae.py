@@ -68,7 +68,7 @@ def fuse_proteins(device: torch.device, vgae_model_path: str, pae_model_path:str
         # Perform attention-based fusion using learned projections
         try:
             fused_data = fuse_with_attention(graph=graph, tokenized_seq=seq, pointcloud=cloud, vgae_model=vgae_model, 
-                                             pae_model=pae_model, device=device, modality_dim=modality_dim, shared_dim=shared_dim)
+                                             pae_model=pae_model, device=device, shared_dim=shared_dim)
         except torch.OutOfMemoryError:
             print(f"Failed with protein {protein_id}")
             n_bad += 1
