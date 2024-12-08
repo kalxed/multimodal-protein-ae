@@ -205,6 +205,15 @@ def main():
     print(f"using device {device}")
 
     if args.mode == "process":
+        if os.getenv("SLURM_ARRAY_TASK_COUNT"):
+            ntasks = int(os.environ.get("SLURM_ARRAY_TASK_COUNT", "1"))
+            task_idx = int(os.environ.get("SLURM_ARRAY_TASK_ID", "0"))
+
+            # determine which files to process based on what task number we are
+            files_to_process = len(protein_ids) // ntasks
+            first_file = files_to_process * task_idx
+            last_file = len(protein_ids) if task_idx == (ntasks - 1) else (first_file + files_to_process)
+            protein_ids = protein_ids[first_file:last_file]
         fuse_proteins(device=device, vgae_model_path= vgae_path, pae_model_path=pae_path, data_dir=data_dir, protein_ids=protein_ids)
 
     if args.mode != "process":
