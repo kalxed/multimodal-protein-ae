@@ -158,16 +158,6 @@ def fuse_with_attention(graph: Data, tokenized_seq: torch.Tensor, pointcloud: Da
         pae_model.eval()
         encoded_point_cloud = pae_model.encode(pointcloud[None, :]).squeeze()#.to("cpu")
         encoded_point_cloud = z_score_standardization(encoded_point_cloud)
-        
-    # Define Linear Projections for each modality
-    sequence_proj = torch.nn.Linear(encoded_sequence.shape[-1], modality_dim).to(device)
-    graph_proj = torch.nn.Linear(encoded_graph.shape[-1], modality_dim).to(device)
-    point_cloud_proj = torch.nn.Linear(encoded_point_cloud.shape[-1], modality_dim).to(device)
-
-    # Apply Linear Projections
-    projected_sequence = sequence_proj(encoded_sequence)
-    projected_graph = graph_proj(encoded_graph)
-    projected_point_cloud = point_cloud_proj(encoded_point_cloud)
 
     attention_fusion = AttentionFusion(
         input_dims={"sequence": modality_dim, "graph": modality_dim, "point_cloud": modality_dim},
@@ -176,9 +166,9 @@ def fuse_with_attention(graph: Data, tokenized_seq: torch.Tensor, pointcloud: Da
     
     # Perform attention-based fusion using learned projections
     fused_data = attention_fusion(
-        projected_sequence.to(device),
-        projected_graph.to(device),
-        projected_point_cloud.to(device),
+        encoded_sequence.to(device),
+        encoded_graph.to(device),
+        encoded_point_cloud.to(device),
     )
     
     return fused_data
