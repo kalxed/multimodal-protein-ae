@@ -21,16 +21,30 @@ class AttentionFusion(nn.Module):
         graph_proj = self.projections["graph"](graph)
         pc_proj = self.projections["point_cloud"](point_cloud)
 
-        # Stack the projected features
-        tokens = torch.stack([seq_proj, graph_proj, pc_proj], dim=0)  # Shape: (3, batch_size, shared_dim)
+        # Concatenate all tokens across modalities
+        tokens = torch.cat([seq_proj, graph_proj, pc_proj], dim=0)  # (total_tokens, batch_size, shared_dim)
 
         # Compute attention
-        attn_output, attn_weights = self.attention(tokens, tokens, tokens)  # Shape: (3, batch_size, shared_dim)
+        attn_output, attn_weights = self.attention(tokens, tokens, tokens)  # (total_tokens, batch_size, shared_dim)
 
-        # Aggregate modalities and produce fused output
-        fusion = attn_output.mean(dim=0)  # Average over modalities
+        # Aggregate modalities using learned weights
+        modality_weights = nn.Parameter(torch.ones(tokens.size(0), 1, 1))  # Learnable modality weights
+        fusion = torch.sum(attn_output * modality_weights, dim=0)  # Weighted sum across modalities
+
+        # Final transformation
         fusion = self.fc_out(fusion)
         return fusion, attn_weights
+
+        # # Stack the projected features
+        # tokens = torch.stack([seq_proj, graph_proj, pc_proj], dim=0)  # Shape: (3, batch_size, shared_dim)
+
+        # # Compute attention
+        # attn_output, attn_weights = self.attention(tokens, tokens, tokens)  # Shape: (3, batch_size, shared_dim)
+
+        # # Aggregate modalities and produce fused output
+        # fusion = attn_output.mean(dim=0)  # Average over modalities
+        # fusion = self.fc_out(fusion)
+        # return fusion, attn_weights
 
     def encode(self, sequence, graph, point_cloud):
         return self.forward(sequence, graph, point_cloud)

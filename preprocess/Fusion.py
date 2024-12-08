@@ -15,6 +15,7 @@ from model.PAE import *
 import glob
 from model.Attention import AttentionFusion
 from model.Concrete_Autoencoder import ConcreteAutoencoder
+from downstreamtasks.utils import *
 
 class MultimodalDataset(Dataset):
     def __init__(self, data):
@@ -47,12 +48,13 @@ def z_score_standardization(tensor):
 
 def process(device):
     # Load pre-trained models
-    vgae_model = torch.load("./data/models/VGAE.pt", map_location=device, weights_only=False)
-    pae_model = torch.load("./data/models/PAE.pt", map_location=device, weights_only=False)
-    model_token = "facebook/esm2_t30_150M_UR50D"
-    esm_model = transformers.AutoModelForMaskedLM.from_pretrained(model_token)
-    esm_model = esm_model.to(device)
-    print("Pre-trained models loaded successfully.")
+    # vgae_model = torch.load("./data/models/VGAE.pt", map_location=device, weights_only=False)
+    # pae_model = torch.load("./data/models/PAE.pt", map_location=device, weights_only=False)
+    # model_token = "facebook/esm2_t30_150M_UR50D"
+    # esm_model = transformers.AutoModelForMaskedLM.from_pretrained(model_token)
+    # esm_model = esm_model.to(device)
+    # print("Pre-trained models loaded successfully.")
+    vgae_model, pae_model, esm_model, _ = load_models()
 
     # Directories for graph, sequence, and point cloud data
     graph_dir = "./data/graphs/"
@@ -64,8 +66,12 @@ def process(device):
     pointcloud_files = sorted(os.listdir(pointcloud_dir))
     sequence_files = sorted(os.listdir(sequence_dir))
 
-    shared_dim = modality_dim * 3
+    shared_dim = 640
     processed_data_list = []
+    
+    # Initialize the AttentionFusion model with fixed input dimensions
+    input_dims = {"sequence": shared_dim, "graph": shared_dim, "point_cloud": shared_dim}
+    attention_fusion = AttentionFusion(input_dims, shared_dim).to(device)
 
     for graph_file, pointcloud_file, sequence_file in tqdm(
         zip(graph_files, pointcloud_files, sequence_files),
@@ -98,9 +104,32 @@ def process(device):
             encoded_point_cloud = pae_model.encode(point_cloud[None, :]).squeeze().to("cpu")
             encoded_point_cloud = z_score_standardization(encoded_point_cloud)
         
-        input_dims = {"sequence": encoded_sequence.shape[0], "graph": encoded_graph.shape[0], "point_cloud": encoded_point_cloud.shape[0]}
-        shared_dim = 640
-        attention_fusion = AttentionFusion(input_dims, shared_dim)
+        # input_dims = {"sequence": encoded_sequence.shape[0], "graph": encoded_graph.shape[0], "point_cloud": encoded_point_cloud.shape[0]}
+        # shared_dim = 640
+        # attention_fusion = AttentionFusion(input_dims, shared_dim)
+        
+        # Ensure all modalities are 2D tensors (batch_size, shared_dim) before passing to attention
+        encoded_sequence = encoded_sequence.unsqueeze(0) if encoded_sequence.dim() == 1 else encoded_sequence
+        encoded_graph = encoded_graph.unsqueeze(0) if encoded_graph.dim() == 1 else encoded_graph
+        encoded_point_cloud = encoded_point_cloud.unsqueeze(0) if encoded_point_cloud.dim() == 1 else encoded_point_cloud
+        
+        # Project all modalities to the shared dimension inside the loop
+        projection_layers = {
+            "sequence": nn.Linear(encoded_sequence.shape[-1], shared_dim).to(device),  # Assuming sequence size
+            "graph": nn.Linear(encoded_graph.shape[-1], shared_dim).to(device),        # Assuming graph size
+            "point_cloud": nn.Linear(encoded_point_cloud.shape[-1], shared_dim).to(device)  # Assuming point cloud size
+        }
+        
+        encoded_sequence = projection_layers["sequence"](encoded_sequence.to(device))
+        encoded_graph = projection_layers["graph"](encoded_graph.to(device))
+        encoded_point_cloud = projection_layers["point_cloud"](encoded_point_cloud.to(device))
+
+        # # Stack the modalities for attention, ensuring the shape is (seq_len, batch_size, embed_dim)
+        # tokens = torch.stack([encoded_sequence, encoded_graph, encoded_point_cloud], dim=0)  # Shape: (3, batch_size, shared_dim)
+
+        # # Add a batch dimension if necessary (for batch_size=1)
+        # if tokens.dim() == 2:
+        #     tokens = tokens.unsqueeze(0)  # Shape becomes (1, seq_len, shared_dim)
 
         fused_rep, _ = attention_fusion(encoded_sequence, encoded_graph, encoded_point_cloud)
         
