@@ -1,5 +1,6 @@
 #!/bin/bash
 #SBATCH -J FUSION
+#SBATCH --array=0:4
 #SBATCH -n 1
 #SBATCH --gpus-per-task=1
 #SBATCH -o logs/fusion-%j.out
