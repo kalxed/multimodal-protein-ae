@@ -36,6 +36,12 @@ class ConcreteAutoencoder(nn.Module):
             nn.Dropout(dropout_rate),  # Add dropout after ReLU
             nn.Linear(hidden_dim, latent_dim)
         )
+        
+        # Add attention mechanism to the encoder (self-attention)
+        ## Comment out if not using attention ##
+        ## embed_dim = latent_dim if attention after encoding ##
+        ## embed_dim = input_dim if attention before encoding ##
+        self.attention = nn.MultiheadAttention(embed_dim=latent_dim, num_heads=4) 
 
         # Decoder: Mapping latent space back to original input space
         self.decoder = nn.Sequential(
@@ -68,13 +74,31 @@ class ConcreteAutoencoder(nn.Module):
         """
         fused_rep: The representation coming from the attention fusion of multiple modalities
         """
-        # Encoder produces logits
+        ## Attention before encoding ##
+        # attention_rep, attention_weights = self.attention(fused_rep, fused_rep, fused_rep)
+        
+        # encoded = self.encoder(attention_rep)
+        
+        # concrete_rep = self.concrete(encoded)
+        
+        # reconstructed = self.decoder(concrete_rep)
+        
+        # return reconstructed
+    
+        ## Attention after encoding ##
         encoded = self.encoder(fused_rep)
         
-        # Apply concrete distribution to get discrete latent representation
-        concrete_rep = self.concrete(encoded)
+        attention_rep, attention_weights = self.attention(encoded, encoded, encoded)
         
-        # Decoder reconstructs input from the latent representation
+        concrete_rep = self.concrete(attention_rep)
+        
         reconstructed = self.decoder(concrete_rep)
         
         return reconstructed
+        
+        ## No attention mechanism ##
+        # encoded = self.encoder(fused_rep)
+        
+        # concrete_rep = self.concrete(encoded)
+        
+        # return self.decoder(concrete_rep)
