@@ -166,7 +166,7 @@ def fuse_with_attention(graph: Data, tokenized_seq: torch.Tensor, pointcloud: Da
         graph = graph.to(device)
         vgae_model.eval()
         encoded_graph = vgae_model.encode(graph.x, graph.edge_index).to(device)
-        encoded_graph = process_encoded_graph(encoded_graph, encoded_graph.edge_index)
+        encoded_graph = process_encoded_graph(encoded_graph, graph.edge_index)
         encoded_graph = torch.mean(encoded_graph, dim=1)
         encoded_graph = z_score_standardization(encoded_graph)
 
