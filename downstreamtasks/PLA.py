@@ -35,7 +35,7 @@ def get_ligand_representation(ligand_smiles):
     fingerprint_tensor = torch.tensor(fingerprint, dtype=torch.float32)
     return fingerprint_tensor
 
-def process(dataset_name):
+def process(dataset_name, batches):
     """
     Process all modality with protein-ligand affinity data
     """
@@ -79,72 +79,135 @@ def process(dataset_name):
         
         # TODO: if needed. commented out for now
         # Save and reset data after reaching the batch size
-        # if (i + 1) % batch_size == 0 or (i + 1) == len(df):
-        #     batch_counter += 1
-        #     pickle_batch_dump(batch_counter, data_folder, mulmodal, sequence, graph, point_cloud)
+        if batches:
+            if (i + 1) % batch_size == 0 or (i + 1) == len(df):
+                batch_counter += 1
+                pickle_batch_dump(batch_counter, data_folder, mulmodal, sequence, graph, point_cloud)
 
-        #     # Clear lists to free up memory
-        #     mulmodal.clear()
-        #     sequence.clear()
-        #     graph.clear()
-        #     point_cloud.clear()
+                # Clear lists to free up memory
+                mulmodal.clear()
+                sequence.clear()
+                graph.clear()
+                point_cloud.clear()
 
-    pickle_dump(data_folder, mulmodal, sequence, graph, point_cloud)
+    if not batches:
+        pickle_dump(data_folder, mulmodal, sequence, graph, point_cloud)
     print("Features processed successfully.")
+    
+# def load_batch_data(modality_folder, modality):
+#     batch_files = [os.path.join(modality_folder, name) for name in os.listdir(modality_folder) if name.endswith('.pkl')]
 
-def setup(dataset, modal):
-    data_folder = f'../downstreamtasks/{dataset}'
+#     all_data = []
+#     for batch_file in batch_files:
+#         with open(batch_file, 'rb') as f:
+#             # tensor_list = pickle.load(f)
+#             data = pickle.load(f)
+#             all_data.extend(data)
+            
+#     if modality == "graph":
+#         # print(len(all_data))
+#         return all_data
+    
+#     return np.array(all_data)
+    
+# def load_data(data_folder, modal):
+#     with open(f'{data_folder}/{modal}.pkl', 'rb') as f:
+#         tensor_list = pickle.load(f)
+#         data = [tensor.detach().numpy() for tensor in tensor_list]
+            
+#     return np.array(data)
+
+# def pad_truc(seq, max_len):
+#     if len(seq) < max_len:
+#         # Pad the sequence
+#         return np.pad(seq, (0, max_len - len(seq)), 'constant')
+#     else:
+#         # Truncate the sequence
+#         return seq[:max_len]
+
+def setup(dataset, modal, batches):
+    data_folder = f'./data/{dataset}'
+
+    # Load feature data from the selected modality 
+    if batches:
+        if modal != "multimodal":
+            modality_folder = os.path.join(data_folder, modal + "s")
+        else:
+            modality_folder = os.path.join(data_folder, modal)
+        num_batches = len([name for name in os.listdir(modality_folder) if name.endswith('.pkl') and os.path.isfile(os.path.join(modality_folder, name))])
+        print(f'Number of batches: {num_batches}')
+        X = load_batch_data(modality_folder, modal)
+    if not batches:
+        # Check if the data is already processed
+        if not os.path.exists(f'{data_folder}/{modal}.pkl'):
+            print(f"Error: {modal} data not found. Please process the data first.")
+            sys.exit(1)
+        else: 
+            X = load_data(data_folder, modal)
 
     # Read the label CSV file
     df = pd.read_csv(f'{data_folder}/label.csv')
     print("Number of samples:", len(df))
-
-    # Load feature data from the selected modality
-    with open(f'{data_folder}/{modal}.pkl', 'rb') as f:
-        tensor_list = pickle.load(f)
-        data = [tensor.detach().numpy() for tensor in tensor_list]
-        X = np.array(data)
-
-    y = df['label'].to_numpy() 
+    
+    y = df['label'].to_numpy()
 
     # Load test and train IDs from the fold setting
     with open(f'{data_folder}/folds/test_fold_setting.txt', 'r') as f:
         test_ids_str = f.read()
         test_ids = ast.literal_eval(test_ids_str)
-        train_ids = np.setdiff1d(np.arange(X.shape[0]), test_ids)
+
+        # Handle the case for graph data and non-graph data separately
+        if modal == "graph":
+            train_ids = np.setdiff1d(np.arange(len(X)), test_ids)
+        else:
+            train_ids = np.setdiff1d(np.arange(X.shape[0]), test_ids)
 
     # Print the sizes of the training and test sets
     print(f'Size of Training Set: {len(train_ids)} samples')
     print(f'Size of Test Set: {len(test_ids)} samples')
     
     # Ensure test_ids are within the valid range
-    test_ids = [i for i in test_ids if i < X.shape[0]]
+    test_ids = [i for i in test_ids if i < len(X)]
     print(f'Filtered Test IDs: {test_ids}')
 
     # Split the data into training and test sets
-    X_train = X[train_ids]
+    if modal == "graph":
+        # If dealing with graphs, split the list of Data objects into train/test
+        X_train = [X[i] for i in train_ids]
+        X_test = [X[i] for i in test_ids]
+        
+        # Set the dimensionality of graphs based on the median length 
+        lengths = [len(sample) for sample in X]
+        median_length = int(np.median(lengths))
+        X_train = [pad_truc(sample, median_length) for sample in X_train]
+        X_test = [pad_truc(sample, median_length) for sample in X_train]
+        
+    else:
+        # For non-graph modalities (like sequence, point cloud, etc.)
+        X_train = X[train_ids]
+        X_test = X[test_ids]
+        
     y_train = y[train_ids]
-
-    X_test = X[test_ids]
     y_test = y[test_ids]
-
-    # Convert data to PyTorch tensors
-    X_train, y_train = torch.tensor(X_train, dtype=torch.float32), torch.tensor(y_train, dtype=torch.float32)
-    X_test, y_test = torch.tensor(X_test, dtype=torch.float32), torch.tensor(y_test, dtype=torch.float32)
+    
+    X_train = torch.tensor(X_train, dtype=torch.float32)
+    y_train = torch.tensor(y_train, dtype=torch.float32)
+    X_test = torch.tensor(X_test, dtype=torch.float32)
+    y_test = torch.tensor(y_test, dtype=torch.float32)
 
     likelihood = gpytorch.likelihoods.GaussianLikelihood()
     model = ExactGPModel(X_train, y_train, likelihood)
 
     return model, X_train, y_train, X_test, y_test, likelihood, data_folder
 
-def train(dataset, modal):
+def train(dataset, modal, batches):
     # Define optimizer and loss
-    model, X_train, y_train, X_test, y_test, likelihood, data_folder = setup(dataset, modal)
-    optimizer = torch.optim.Adam(model.parameters(), lr=0.25)
+    model, X_train, y_train, X_test, y_test, likelihood, data_folder = setup(dataset, modal, batches)
+    optimizer = torch.optim.Adam(model.parameters(), lr=0.20)
     mll = gpytorch.mlls.ExactMarginalLogLikelihood(likelihood, model)
 
     # Train the model
-    training_iter = 1000
+    training_iter = 100
     for i in range(training_iter):
         model.train()
         likelihood.train()
@@ -194,3 +257,48 @@ def test(dataset, modal):
         print("Rm^2:", rm2)
         print("Mean of Lower Confidence Bounds:", lower.mean())
         print("Mean of Upper Confidence Bounds:", upper.mean())
+        
+        
+# Outside method to process label.csv in PLA dataset
+# dataset_name = "DAVIS"
+# data_folder = f'./data/{dataset_name}'
+# df = pd.read_csv(f'{data_folder}/label.csv')
+# print("Starting number of samples:", len(df))
+
+# # List to hold indices of rows to remove
+# rows_to_remove = []
+
+# # Iterate through the dataset to process each sample
+# for i, (ligand_smiles, protein_name) in tqdm(
+#     enumerate(zip(df["ligand"], df["protein"])),
+#     desc="Evaluating proteins",
+#     total=len(df),
+#     bar_format="{l_bar}{bar} | Elapsed: {elapsed}, Remaining: {remaining}",
+# ):
+#     pdb_path = f"{data_folder}/pdb/{protein_name}.pdb"
+    
+#     parser = PDBParser(QUIET=True)
+#     structure = parser.get_structure('protein', pdb_path)
+
+#     for residue in structure.get_residues():
+#         if 'CA' in residue:
+#             try:  
+#                 aa_code = Polypeptide.three_to_index(residue.get_resname())
+#                 has_non_standard_aa = False
+#             except KeyError:
+#                 # Non-standard residue, break and mark for removal
+#                 has_non_standard_aa = True
+#                 break
+            
+#     # If a non-standard amino acid is found, mark the row for removal
+#     if has_non_standard_aa:
+#         rows_to_remove.append(i)
+            
+# # Remove the rows with non-standard amino acids
+# df_cleaned = df.drop(rows_to_remove)
+
+# print("Ending number of samples:", len(df_cleaned))
+
+# # Save the cleaned label CSV
+# df_cleaned.to_csv(f'{data_folder}/label_cleaned.csv', index=False)
+# print(f"Number of samples after cleaning: {len(df_cleaned)}")

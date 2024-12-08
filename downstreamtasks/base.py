@@ -5,11 +5,12 @@ def main():
     print("Argument Reader for Downstream Tasks")
     
     tasks = ["PLA", "PFC", "EI", "MSP"]
-    modalities = ["sequence", "graph", "point_cloud", "multimodal"]
+    modalities = ["sequence", "graph", "pointcloud", "multimodal"]
     modes = ["process", "train", "test"]
     pfc_datasets = ["family", "fold", "superfamily"]
     pla_datasets = ["DAVIS", "KIBA"]
     task_dataset = ""
+    batches = False
     
     task = None
     modality = None
@@ -26,6 +27,13 @@ def main():
         mode = input(f"Select the mode ({', '.join(modes)}): ").strip().lower()
         if mode not in modes:
             print("Invalid mode. Please choose from the available options.")
+            
+    if mode == "process" or mode == "train":
+        batch = input(f"Choose to process in batches (True/False): ").strip().lower()
+        if batch not in ["true", "false"]:
+            print("Invalid selection. Please choose 'True' or 'False'.")
+        else:
+            batches = batch == "true"
             
     if mode == "train" or mode == "test":
         while modality not in modalities:
@@ -54,6 +62,8 @@ def main():
     print(f"Mode: {mode}")
     if mode == "train" or mode == "test":
         print(f"Modality: {modality}")
+    if mode == "process":
+        print(f"Batch Processing: {batches}")
     if task == "PFC" and mode == "test" or task == "PLA":
         print(f"Dataset: {task_dataset}")
     
@@ -62,9 +72,9 @@ def main():
     if task == "PLA":
         match mode:
             case "process":
-                PLA.process(task_dataset)
+                PLA.process(task_dataset, batches)
             case "train":
-                PLA.train(task_dataset, modality)
+                PLA.train(task_dataset, modality, batches)
             case "test":
                 PLA.test(task_dataset, modality)
     elif task == "PFC":
@@ -72,9 +82,9 @@ def main():
     elif task == "EI":
         match mode:
             case "process":
-                EI.process()
+                EI.process(batches)
             case "train":
-                EI.train(modality)
+                EI.train(modality, batches)
             case "test":
                 EI.test(modality)
     elif task == "MSP":

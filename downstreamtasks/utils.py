@@ -140,6 +140,43 @@ def pickle_batch_dump(batch_num, data_folder, mulmodal, sequence, graph, point_c
 
     with open(f'{data_folder}/pointclouds/{batch_num}.pkl', 'wb') as f:
         pickle.dump(point_cloud, f)
+
+def load_batch_data(modality_folder, modality):
+    """
+    Load data in batches from a folder and return as a list.
+    """
+    batch_files = [os.path.join(modality_folder, name) for name in os.listdir(modality_folder) if name.endswith('.pkl')]
+
+    all_data = []
+    for batch_file in batch_files:
+        with open(batch_file, 'rb') as f:
+            data = pickle.load(f)
+            all_data.extend(data)
+
+    if modality == "graph":
+        return all_data
+
+    return np.array(all_data)
+
+def load_data(data_folder, modal):
+    """
+    Load data from a specific modality pickle file.
+    """
+    with open(f'{data_folder}/{modal}.pkl', 'rb') as f:
+        tensor_list = pickle.load(f)
+        data = [tensor.detach().numpy() for tensor in tensor_list]
+
+    return np.array(data)
+
+def pad_truc(seq, max_len):
+    """
+    Pad or truncate a sequence to the specified length.
+    """
+    if len(seq) < max_len:
+        return np.pad(seq, (0, max_len - len(seq)), 'constant')
+    else:
+        return seq[:max_len]
+
         
 def get_aa_label_encoder(file_type):
     if file_type == "pdb":
@@ -233,6 +270,7 @@ def get_modalities(protein_path, ESM, VGAE, PAE, Fusion):
         sequence, graph, point_cloud = read_hdf5(protein_path)
 
     if sequence is None or graph is None or point_cloud is None:
+        print(f'Failed {protein_path}')
         return None, None, None, None
     
     # Pass the sequence data through ESM for encoding
@@ -314,6 +352,7 @@ def read_hdf5(hdf5_path):
     except ValueError as e:
         print(f"Error converting amino acid indices: {e}")
         return None, None, None
+
     
     sequence_token = tokenizer(
         sequence, return_tensors="pt", padding=True, truncation=True, max_length=2048
