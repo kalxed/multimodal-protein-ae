@@ -45,9 +45,9 @@ def fuse_proteins(device: torch.device, vgae_model_path: str, pae_model_path:str
     pae_model.load_state_dict(torch.load(pae_model_path, map_location=device, weights_only=True))
     print("Pre-trained models loaded successfully.")
 
-    graph_data = SingleModeDataset([osp.join(data_dir, "graphs", prot_id) for prot_id in protein_ids])
-    seq_data = SingleModeDataset([osp.join(data_dir, "sequences", prot_id) for prot_id in protein_ids])
-    cloud_data = SingleModeDataset([osp.join(data_dir, "pointclouds", prot_id) for prot_id in protein_ids])
+    graph_data = SingleModeDataset([osp.join(data_dir, "graphs", prot_id) for prot_id in protein_ids], device=device)
+    seq_data = SingleModeDataset([osp.join(data_dir, "sequences", prot_id) for prot_id in protein_ids], device=device)
+    cloud_data = SingleModeDataset([osp.join(data_dir, "pointclouds", prot_id) for prot_id in protein_ids], device=device)
 
     modality_dim = 640  # Dimension of each modality
     shared_dim = modality_dim * 3
