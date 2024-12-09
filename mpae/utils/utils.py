@@ -140,7 +140,7 @@ def process_encoded_graph(encoded_graph, edge_index, fixed_size=640, feature_dim
     if num_nodes > fixed_size:
         ratio = fixed_size / num_nodes
         with torch.no_grad():
-            pooling_layer = TopKPooling(in_channels=feature_dim, ratio=ratio)
+            pooling_layer = TopKPooling(in_channels=feature_dim, ratio=ratio).to(encoded_graph.device)
             pooled_x, edge_index, edge_attr, batch, perm, score = pooling_layer(encoded_graph, edge_index)
         processed_encoded_graph = pooled_x
     else:
@@ -177,6 +177,6 @@ def fuse_with_attention(graph: Data, tokenized_seq: torch.Tensor, pointcloud: Da
         encoded_point_cloud = pae_model.encode(pointcloud[None, :]).squeeze()#.to("cpu")
         encoded_point_cloud = z_score_standardization(encoded_point_cloud)
 
-    fused_data = torch.cat((encoded_sequence, encoded_graph, encoded_point_cloud), dim=0)
+    fused_data = torch.cat((encoded_sequence.to(device), encoded_graph.to(device), encoded_point_cloud.to(device)), dim=0)
     
     return fused_data
