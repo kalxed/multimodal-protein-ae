@@ -135,27 +135,29 @@ def z_score_standardization(tensor):
     standardized_tensor = (tensor - mean) / std
     return standardized_tensor
 
-def process_encoded_graph(encoded_graph, edge_index, fixed_size=640, feature_dim=10):
+def process_encoded_graph(encoded_graph: torch.Tensor, fixed_size=640, feature_dim=10):
     num_nodes = encoded_graph.size(0)
     if num_nodes > fixed_size:
-        ratio = fixed_size / num_nodes
-        with torch.no_grad():
-            pooling_layer = TopKPooling(in_channels=feature_dim, ratio=ratio)
-            pooled_x, edge_index, edge_attr, batch, perm, score = pooling_layer(encoded_graph, edge_index)
-        processed_encoded_graph = pooled_x
-    else:
+        # Randomly sample nodes to downsample
+        indices = torch.randperm(num_nodes)[:fixed_size]
+        processed_encoded_graph = encoded_graph[indices]
+    elif num_nodes < fixed_size:
+        # Pad with zeros if not enough nodes
         padding_size = fixed_size - num_nodes
-        zero_padding = torch.zeros(padding_size, feature_dim)
+        zero_padding = torch.zeros(padding_size, feature_dim, device=encoded_graph.device)
         processed_encoded_graph = torch.cat((encoded_graph, zero_padding), dim=0)
+    else:
+        processed_encoded_graph = encoded_graph
     return processed_encoded_graph
 
-
-
-def fuse_with_attention(graph: Data, tokenized_seq: torch.Tensor, pointcloud: Data, vgae_model: VGAE, pae_model: PointAutoencoder, device, shared_dim: int):
+def fuse_modalities(graph: Data, tokenized_seq: torch.Tensor, pointcloud: torch.Tensor, vgae_model: VGAE, pae_model: PointAutoencoder, device: torch.device):
     # Encode sequence data using ESM
     vgae_model = vgae_model.to(device)
+    vgae_model.eval()
     pae_model = pae_model.to(device)
+    pae_model.eval()
     esm_model = esm.esm_model.to(device)
+    esm_model.eval()
     with torch.no_grad():
         tokenized_seq = tokenized_seq.to(device)
         encoded_sequence = esm_model(tokenized_seq, output_hidden_states=True)["hidden_states"][-1][0, -1].to(device)
@@ -164,19 +166,17 @@ def fuse_with_attention(graph: Data, tokenized_seq: torch.Tensor, pointcloud: Da
     # Encode graph data using VGAE
     with torch.no_grad():
         graph = graph.to(device)
-        vgae_model.eval()
         encoded_graph = vgae_model.encode(graph.x, graph.edge_index).to(device)
-        encoded_graph = process_encoded_graph(encoded_graph, graph.edge_index)
+        encoded_graph = process_encoded_graph(encoded_graph)
         encoded_graph = torch.mean(encoded_graph, dim=1)
         encoded_graph = z_score_standardization(encoded_graph)
 
     # Encode point cloud data using PAE
     with torch.no_grad():
         pointcloud = pointcloud.to(device)
-        pae_model.eval()
-        encoded_point_cloud = pae_model.encode(pointcloud[None, :]).squeeze()#.to("cpu")
+        encoded_point_cloud = pae_model.encode(pointcloud[None, :]).squeeze()
         encoded_point_cloud = z_score_standardization(encoded_point_cloud)
 
-    fused_data = torch.cat((encoded_sequence, encoded_graph, encoded_point_cloud), dim=0)
+    fused_data = torch.cat((encoded_sequence.to(device), encoded_graph.to(device), encoded_point_cloud.to(device)), dim=0)
     
     return fused_data
