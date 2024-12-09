@@ -63,16 +63,17 @@ class ConcreteAutoencoder(nn.Module):
         """
         Encodes the input into the latent space.
         """
-        return self.encoder(fused_rep)
+        attention_rep, _ = self.attention(fused_rep, fused_rep, fused_rep)
+
+        encoded = self.encoder(attention_rep)
+        return encoded
 
     def forward(self, fused_rep):
         """
         fused_rep: The representation coming from the attention fusion of multiple modalities
         """
         # Encoder produces logits
-        attention_rep, _ = self.attention(fused_rep, fused_rep, fused_rep)
-
-        encoded = self.encoder(attention_rep)
+        encoded = self.encode(fused_rep)
         
         # Apply concrete distribution to get discrete latent representation
         concrete_rep = self.concrete(encoded)
