@@ -23,15 +23,6 @@ torch.serialization.add_safe_globals([torch_geometric.data.data.DataEdgeAttr,
                                       torch_geometric.data.data.DataTensorAttr,
                                       torch_geometric.data.storage.GlobalStorage])
 
-# Function for Z-score standardization
-def z_score_standardization(tensor: torch.Tensor):
-    mean = tensor.mean()
-    std = tensor.std()
-    if std != 0:
-        standardized_tensor = (tensor - mean) / std
-    else:
-        standardized_tensor = tensor  # Handle the case when std is 0
-    return standardized_tensor
 
 def fuse_proteins(device: torch.device, vgae_model_path: str, pae_model_path:str, data_dir: str, protein_ids: list[str]):
     """perform attention-based fusion
