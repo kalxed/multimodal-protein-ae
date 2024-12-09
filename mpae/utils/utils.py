@@ -152,7 +152,7 @@ def process_encoded_graph(encoded_graph: torch.Tensor, fixed_size=640, feature_d
 
 
 
-def fuse_with_attention(graph: Data, tokenized_seq: torch.Tensor, pointcloud: Data, vgae_model: VGAE, pae_model: PointAutoencoder, device, shared_dim: int):
+def fuse_modalities(graph: Data, tokenized_seq: torch.Tensor, pointcloud: torch.Tensor, vgae_model: VGAE, pae_model: PointAutoencoder, device: torch.device):
     # Encode sequence data using ESM
     vgae_model = vgae_model.to(device)
     pae_model = pae_model.to(device)
