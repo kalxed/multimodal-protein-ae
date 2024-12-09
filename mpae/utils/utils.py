@@ -145,7 +145,7 @@ def process_encoded_graph(encoded_graph, edge_index, fixed_size=640, feature_dim
         processed_encoded_graph = pooled_x
     else:
         padding_size = fixed_size - num_nodes
-        zero_padding = torch.zeros(padding_size, feature_dim)
+        zero_padding = torch.zeros(padding_size, feature_dim, device=encoded_graph.device)
         processed_encoded_graph = torch.cat((encoded_graph, zero_padding), dim=0)
     return processed_encoded_graph
 
