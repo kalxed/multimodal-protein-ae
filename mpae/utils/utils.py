@@ -150,13 +150,14 @@ def process_encoded_graph(encoded_graph: torch.Tensor, fixed_size=640, feature_d
         processed_encoded_graph = encoded_graph
     return processed_encoded_graph
 
-
-
 def fuse_modalities(graph: Data, tokenized_seq: torch.Tensor, pointcloud: torch.Tensor, vgae_model: VGAE, pae_model: PointAutoencoder, device: torch.device):
     # Encode sequence data using ESM
     vgae_model = vgae_model.to(device)
+    vgae_model.eval()
     pae_model = pae_model.to(device)
+    pae_model.eval()
     esm_model = esm.esm_model.to(device)
+    esm_model.eval()
     with torch.no_grad():
         tokenized_seq = tokenized_seq.to(device)
         encoded_sequence = esm_model(tokenized_seq, output_hidden_states=True)["hidden_states"][-1][0, -1].to(device)
@@ -165,7 +166,6 @@ def fuse_modalities(graph: Data, tokenized_seq: torch.Tensor, pointcloud: torch.
     # Encode graph data using VGAE
     with torch.no_grad():
         graph = graph.to(device)
-        vgae_model.eval()
         encoded_graph = vgae_model.encode(graph.x, graph.edge_index).to(device)
         encoded_graph = process_encoded_graph(encoded_graph)
         encoded_graph = torch.mean(encoded_graph, dim=1)
@@ -174,8 +174,7 @@ def fuse_modalities(graph: Data, tokenized_seq: torch.Tensor, pointcloud: torch.
     # Encode point cloud data using PAE
     with torch.no_grad():
         pointcloud = pointcloud.to(device)
-        pae_model.eval()
-        encoded_point_cloud = pae_model.encode(pointcloud[None, :]).squeeze()#.to("cpu")
+        encoded_point_cloud = pae_model.encode(pointcloud[None, :]).squeeze()
         encoded_point_cloud = z_score_standardization(encoded_point_cloud)
 
     fused_data = torch.cat((encoded_sequence.to(device), encoded_graph.to(device), encoded_point_cloud.to(device)), dim=0)
