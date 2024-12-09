@@ -29,16 +29,16 @@ def fuse_proteins(device: torch.device, vgae_model_path: str, pae_model_path:str
 
     For each protein, fuse the graph, point cloud, and sequence into a single representation
     """
-    
+
     vgae_model = VGAE(VariationalGCNEncoder(20, 10)).to(device)
     vgae_model.load_state_dict(torch.load(vgae_model_path, map_location=device, weights_only=True))
     pae_model = PointAutoencoder(640, 2048).to(device)
     pae_model.load_state_dict(torch.load(pae_model_path, map_location=device, weights_only=True))
     print("Pre-trained models loaded successfully.")
 
-    graph_data = SingleModeDataset([osp.join(data_dir, "graphs", prot_id) for prot_id in protein_ids], device=device)
-    seq_data = SingleModeDataset([osp.join(data_dir, "sequences", prot_id) for prot_id in protein_ids], device=device)
-    cloud_data = SingleModeDataset([osp.join(data_dir, "pointclouds", prot_id) for prot_id in protein_ids], device=device)
+    graph_data = SingleModeDataset(fnames=[osp.join(data_dir, "graphs", prot_id) for prot_id in protein_ids], device=device)
+    seq_data = SingleModeDataset(fnames=[osp.join(data_dir, "sequences", prot_id) for prot_id in protein_ids], device=device)
+    cloud_data = SingleModeDataset(fnames=[osp.join(data_dir, "pointclouds", prot_id) for prot_id in protein_ids], device=device)
 
     modality_dim = 640  # Dimension of each modality
     shared_dim = modality_dim * 3
@@ -55,20 +55,19 @@ def fuse_proteins(device: torch.device, vgae_model_path: str, pae_model_path:str
         cloud = cloud[0]
         seq = seq[0]
 
-        
         # Perform attention-based fusion using learned projections
         try:
             fused_data = fuse_modalities(graph=graph, tokenized_seq=seq, pointcloud=cloud, vgae_model=vgae_model, 
-                                             pae_model=pae_model, device=device, shared_dim=shared_dim)
+                                             pae_model=pae_model, device=device)
         except torch.OutOfMemoryError:
             print(f"Failed with protein {protein_id}")
             n_bad += 1
             continue
-        
+
         torch.save(fused_data, osp.join(res_dir, protein_id))
         if ((i+1) % 1000) == 0:
             print(f"Fused {i+1} files")
-    
+
     if n_bad > 0:
         print(f"Skipped {n_bad} proteins due to memory issues")
 
@@ -91,7 +90,7 @@ def get_loaders(protein_list: list[str], data_dir: str, batch_size, train_size=0
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
     valid_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
     test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
-    
+
     return train_loader, valid_loader, test_loader
 
 @torch.no_grad
@@ -185,7 +184,7 @@ def main():
     pae_path = args.pae_path
     data_dir = args.data_dir
     id_file = args.id_file
-    
+
     num_epochs = args.epochs
     batch_size = args.batch_size
 
@@ -216,7 +215,7 @@ def main():
 
     if args.mode == "test":
         test(test_loader=test_loader, model_path=model_path, criterion=criterion, device=device)
-    
+
     if args.mode == "all":
         fuse_proteins(device=device, vgae_model_path=vgae_path, pae_model_path=pae_path, data_dir=data_dir, protein_ids=protein_ids)
         train(train_loader=train_loader, val_loader=val_loader, criterion=criterion, device=device, num_epochs=num_epochs, model_path=model_path)
