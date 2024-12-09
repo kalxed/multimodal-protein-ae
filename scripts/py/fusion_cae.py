@@ -45,7 +45,7 @@ def fuse_proteins(device: torch.device, vgae_model_path: str, pae_model_path:str
     graph_loader = DataLoader(graph_data, batch_size=1, shuffle=False) 
     seq_loader   = DataLoader(seq_data, batch_size=1, shuffle=False)
     cloud_loader = DataLoader(cloud_data, batch_size=1, shuffle=False)
-    res_dir = osp.join(data_dir, "fusion")
+    res_dir = osp.join(data_dir, "out_dir")
     os.makedirs(res_dir, exist_ok=True)
     n_bad = 0
     for i, (graph, cloud, seq) in enumerate(zip(graph_loader, cloud_loader, seq_loader)):
@@ -206,7 +206,7 @@ def main():
             first_file = files_to_process * task_idx
             last_file = len(protein_ids) if task_idx == (ntasks - 1) else (first_file + files_to_process)
             protein_ids = protein_ids[first_file:last_file]
-        fuse_proteins(device=device, vgae_model_path= vgae_path, pae_model_path=pae_path, data_dir=data_dir, protein_ids=protein_ids, data_dir=data_out)
+        fuse_proteins(device=device, vgae_model_path= vgae_path, pae_model_path=pae_path, data_dir=data_dir, protein_ids=protein_ids, out_dir=data_out)
 
     if args.mode != "process":
         train_loader, val_loader, test_loader = get_loaders(protein_ids, data_dir, batch_size)
