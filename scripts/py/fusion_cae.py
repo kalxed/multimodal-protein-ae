@@ -111,11 +111,11 @@ def validate(model, val_loader, criterion, device):
     return average_loss
 
 @torch.no_grad
-def test(test_loader: torch.utils.data.DataLoader, model_path, criterion, device):
+def test(test_loader: torch.utils.data.DataLoader, model_path, criterion, device, use_attention):
     if len(test_loader) == 0:
         average_loss = torch.nan
     else:
-        model = ConcreteAutoencoder(input_dim=input_dim, hidden_dim=shared_dim, latent_dim=latent_dim, temperature=temperature).to(device)
+        model = ConcreteAutoencoder(input_dim=input_dim, hidden_dim=shared_dim, latent_dim=latent_dim, temperature=temperature, attention=use_attention).to(device)
         model.load_state_dict(torch.load(model_path, weights_only=True))
         model.to(device)
         model.eval()
@@ -131,8 +131,8 @@ def test(test_loader: torch.utils.data.DataLoader, model_path, criterion, device
 
     print(f"Test Loss: {average_loss:.4f}")
 
-def train(train_loader, val_loader, criterion, device, num_epochs, model_path):
-    model = ConcreteAutoencoder(input_dim=input_dim, hidden_dim=shared_dim, latent_dim=latent_dim, temperature=temperature).to(device)
+def train(train_loader, val_loader, criterion, device, num_epochs, model_path, use_attention):
+    model = ConcreteAutoencoder(input_dim=input_dim, hidden_dim=shared_dim, latent_dim=latent_dim, temperature=temperature, attention=use_attention).to(device)
     new_temp = temperature
     # Define optimizer (Adam)
     optimizer = torch.optim.Adam(model.parameters(), lr=0.0001, weight_decay=1e-5)
@@ -181,6 +181,7 @@ def main():
     parser.add_argument("--epochs", default=100, help="number of epochs to train for. only applicable when mode=train", type=int)
     parser.add_argument("--batch-size", default=64, help="batch size for training", type=int, dest="batch_size")
     parser.add_argument("--data-out-dir", default="fusion",type=str, dest="data_out")
+    parser.add_argument("--attention", default=True, type=bool, help="whether to use attention", dest="attention")
 
     args = parser.parse_args()
     model_path = args.model_path
@@ -192,6 +193,7 @@ def main():
     num_epochs = args.epochs
     batch_size = args.batch_size
     data_out = args.data_out
+    use_attention=parser.attention
 
     with open(id_file, 'r') as f:
         protein_ids = [pid.strip() for pid in f.readlines()]
@@ -216,15 +218,15 @@ def main():
         criterion = nn.MSELoss()
 
     if args.mode == "train":
-        train(train_loader=train_loader, val_loader=val_loader, criterion=criterion, device=device, num_epochs=num_epochs, model_path=model_path)
+        train(train_loader=train_loader, val_loader=val_loader, criterion=criterion, device=device, num_epochs=num_epochs, model_path=model_path, use_attention=use_attention)
 
     if args.mode == "test":
         test(test_loader=test_loader, model_path=model_path, criterion=criterion, device=device)
 
     if args.mode == "all":
         fuse_proteins(device=device, vgae_model_path=vgae_path, pae_model_path=pae_path, data_dir=data_dir, protein_ids=protein_ids)
-        train(train_loader=train_loader, val_loader=val_loader, criterion=criterion, device=device, num_epochs=num_epochs, model_path=model_path)
-        test(test_loader=test_loader, model_path=model_path, criterion=criterion, device=device)
+        train(train_loader=train_loader, val_loader=val_loader, criterion=criterion, device=device, num_epochs=num_epochs, model_path=model_path, use_attention=use_attention)
+        test(test_loader=test_loader, model_path=model_path, criterion=criterion, device=device, use_attention=use_attention)
 
 
 if __name__ == "__main__":
