@@ -84,8 +84,9 @@ class ConcreteAutoencoder(nn.Module):
         encoded = self.encode(fused_rep)
         
         # Apply concrete distribution to get discrete latent representation
-        concrete_rep = self.concrete(encoded)
-        
+        # concrete_rep = self.concrete(encoded)
+        concrete_rep = encoded
+
         # Decoder reconstructs input from the latent representation
         reconstructed = self.decoder(concrete_rep)
         
