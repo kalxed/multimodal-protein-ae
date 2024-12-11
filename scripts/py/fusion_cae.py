@@ -17,8 +17,6 @@ import mpae
 input_dim = 640 * 3  # Input dimension after fusion
 shared_dim = 640  # Shared dimension after fusion
 latent_dim = 64  # Latent space size
-temperature = .5  # Concrete distribution temperature
-final_temperature = 0.125
 
 torch.serialization.add_safe_globals([torch_geometric.data.data.DataEdgeAttr, 
                                       torch_geometric.data.data.DataTensorAttr,
@@ -133,7 +131,6 @@ def test(test_loader: torch.utils.data.DataLoader, model_path, criterion, device
 
 def train(train_loader, val_loader, criterion, device, num_epochs, model_path, use_attention):
     model = ConcreteAutoencoder(input_dim=input_dim, hidden_dim=shared_dim, latent_dim=latent_dim, attention=use_attention).to(device)
-    new_temp = temperature
     # Define optimizer (Adam)
     optimizer = torch.optim.Adam(model.parameters(), lr=0.0001, weight_decay=1e-5)
     # Training loop
