@@ -284,7 +284,6 @@ def get_modalities(protein_path, ESM, VGAE, PAE, CAE):
         sequence, graph, point_cloud = read_hdf5(protein_path)
 
     if sequence is None or graph is None or point_cloud is None:
-        print(f'Failed {file_name}')
         return None, None, None, None
     
     # Pass the sequence data through ESM for encoding
