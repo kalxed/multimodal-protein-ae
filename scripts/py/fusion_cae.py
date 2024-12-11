@@ -193,7 +193,7 @@ def main():
     num_epochs = args.epochs
     batch_size = args.batch_size
     data_out = args.data_out
-    use_attention=parser.attention
+    use_attention=args.attention
 
     with open(id_file, 'r') as f:
         protein_ids = [pid.strip() for pid in f.readlines()]
