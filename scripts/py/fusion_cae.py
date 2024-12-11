@@ -132,7 +132,7 @@ def test(test_loader: torch.utils.data.DataLoader, model_path, criterion, device
     print(f"Test Loss: {average_loss:.4f}")
 
 def train(train_loader, val_loader, criterion, device, num_epochs, model_path, use_attention):
-    model = ConcreteAutoencoder(input_dim=input_dim, hidden_dim=shared_dim, latent_dim=latent_dim, temperature=temperature, attention=use_attention).to(device)
+    model = ConcreteAutoencoder(input_dim=input_dim, hidden_dim=shared_dim, latent_dim=latent_dim, attention=use_attention).to(device)
     new_temp = temperature
     # Define optimizer (Adam)
     optimizer = torch.optim.Adam(model.parameters(), lr=0.0001, weight_decay=1e-5)
