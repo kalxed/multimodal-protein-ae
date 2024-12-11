@@ -115,7 +115,7 @@ def test(test_loader: torch.utils.data.DataLoader, model_path, criterion, device
     if len(test_loader) == 0:
         average_loss = torch.nan
     else:
-        model = ConcreteAutoencoder(input_dim=input_dim, hidden_dim=shared_dim, latent_dim=latent_dim, temperature=temperature, attention=use_attention).to(device)
+        model = ConcreteAutoencoder(input_dim=input_dim, hidden_dim=shared_dim, latent_dim=latent_dim, attention=use_attention).to(device)
         model.load_state_dict(torch.load(model_path, weights_only=True))
         model.to(device)
         model.eval()
