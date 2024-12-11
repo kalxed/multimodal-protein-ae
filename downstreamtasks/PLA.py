@@ -1,5 +1,4 @@
 import torch
-import pickle
 import pandas as pd
 import sys
 from tqdm import tqdm
@@ -12,8 +11,6 @@ from model.vgae import *
 from model.PAE import *
 import gpytorch
 import ast
-
-# device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 class ExactGPModel(gpytorch.models.ExactGP):
     def __init__(self, X_train, y_train, likelihood):
@@ -128,11 +125,6 @@ def setup(dataset, modal, batches):
     with open(f'{data_folder}/folds/test_fold_setting.txt', 'r') as f:
         test_ids_str = f.read()
         test_ids = ast.literal_eval(test_ids_str)
-
-        # Handle the case for graph data and non-graph data separately
-        # if modal == "graph":
-        #     train_ids = np.setdiff1d(np.arange(len(X)), test_ids)
-        # else:
         train_ids = np.setdiff1d(np.arange(X.shape[0]), test_ids)
 
     # Print the sizes of the training and test sets
@@ -143,20 +135,6 @@ def setup(dataset, modal, batches):
     test_ids = [i for i in test_ids if i < len(X)]
     # print(f'Filtered Test IDs: {test_ids}')
 
-    # Split the data into training and test sets
-    # if modal == "graph":
-    #     # If dealing with graphs, split the list of Data objects into train/test
-    #     X_train = [X[i] for i in train_ids]
-    #     X_test = [X[i] for i in test_ids]
-        
-    #     # Set the dimensionality of graphs based on the median length 
-    #     lengths = [len(sample) for sample in X]
-    #     median_length = int(np.median(lengths))
-    #     X_train = [pad_truc(sample, median_length) for sample in X_train]
-    #     X_test = [pad_truc(sample, median_length) for sample in X_train]
-        
-    # else:
-    #     # For non-graph modalities (like sequence, point cloud, etc.)
     X_train = X[train_ids]
     X_test = X[test_ids]
         
@@ -176,7 +154,7 @@ def setup(dataset, modal, batches):
 def train(dataset, modal, batches):
     # Define optimizer and loss
     model, X_train, y_train, X_test, y_test, likelihood, data_folder = setup(dataset, modal, batches)
-    optimizer = torch.optim.Adam(model.parameters(), lr=0.20)
+    optimizer = torch.optim.Adam(model.parameters(), lr=0.1)
     mll = gpytorch.mlls.ExactMarginalLogLikelihood(likelihood, model)
 
     # Train the model
@@ -200,9 +178,10 @@ def train(dataset, modal, batches):
     # Save the trained model state
     torch.save(model.state_dict(), f'{data_folder}/{modal}_model_state.pth')
 
-def test(dataset, modal):
-    model, X_train, y_train, X_test, y_test, likelihood, data_folder = setup(dataset)
+def test(dataset, modal,batches):
+    model, X_train, y_train, X_test, y_test, likelihood, data_folder = setup(dataset, modal, batches)
     # Load the trained model state
+    data_folder = f'./data/{dataset}'
     state_dict = torch.load(f'{data_folder}/{modal}_model_state.pth')
     model.load_state_dict(state_dict)
 
@@ -230,48 +209,3 @@ def test(dataset, modal):
         print("Rm^2:", rm2)
         print("Mean of Lower Confidence Bounds:", lower.mean())
         print("Mean of Upper Confidence Bounds:", upper.mean())
-        
-        
-# Outside method to process label.csv in PLA dataset
-# dataset_name = "DAVIS"
-# data_folder = f'./data/{dataset_name}'
-# df = pd.read_csv(f'{data_folder}/label.csv')
-# print("Starting number of samples:", len(df))
-
-# # List to hold indices of rows to remove
-# rows_to_remove = []
-
-# # Iterate through the dataset to process each sample
-# for i, (ligand_smiles, protein_name) in tqdm(
-#     enumerate(zip(df["ligand"], df["protein"])),
-#     desc="Evaluating proteins",
-#     total=len(df),
-#     bar_format="{l_bar}{bar} | Elapsed: {elapsed}, Remaining: {remaining}",
-# ):
-#     pdb_path = f"{data_folder}/pdb/{protein_name}.pdb"
-    
-#     parser = PDBParser(QUIET=True)
-#     structure = parser.get_structure('protein', pdb_path)
-
-#     for residue in structure.get_residues():
-#         if 'CA' in residue:
-#             try:  
-#                 aa_code = Polypeptide.three_to_index(residue.get_resname())
-#                 has_non_standard_aa = False
-#             except KeyError:
-#                 # Non-standard residue, break and mark for removal
-#                 has_non_standard_aa = True
-#                 break
-            
-#     # If a non-standard amino acid is found, mark the row for removal
-#     if has_non_standard_aa:
-#         rows_to_remove.append(i)
-            
-# # Remove the rows with non-standard amino acids
-# df_cleaned = df.drop(rows_to_remove)
-
-# print("Ending number of samples:", len(df_cleaned))
-
-# # Save the cleaned label CSV
-# df_cleaned.to_csv(f'{data_folder}/label_cleaned.csv', index=False)
-# print(f"Number of samples after cleaning: {len(df_cleaned)}")

@@ -154,9 +154,6 @@ def load_batch_data(modality_folder, modality):
             data = pickle.load(f)
             all_data.extend(data)
 
-    if modality == "graph":
-        return all_data
-
     return np.array(all_data)
 
 def load_data(data_folder, modal):
