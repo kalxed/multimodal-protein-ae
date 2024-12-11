@@ -154,8 +154,6 @@ def train(train_loader, val_loader, criterion, device, num_epochs, model_path, u
             total_loss += loss.item()
             optimizer.step()
 
-        model.update_temp(new_temp = temperature * ((final_temperature / temperature) ** (epoch / (num_epochs+1))))
-
         if epoch % 5 == 0:
             train_loss = total_loss / len(train_loader)
             val_loss = validate(model, val_loader, criterion, device)
