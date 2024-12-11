@@ -12,11 +12,13 @@ def main():
     pla_datasets = ["DAVIS", "KIBA"]
     task_dataset = ""
     batches = False
+    atten = False
     
     task = None
     modality = None
     mode = None
     dataset = None
+    attention = None
     
     # Read Arguments
     while task not in tasks:
@@ -40,6 +42,11 @@ def main():
             modality = input(f"Select the modality ({', '.join(modalities)}): ").strip().lower()
             if modality not in modalities:
                 print("Invalid modality. Please choose from the available options.")
+            atten = input(f"Choose to use attention (True/False): ").strip().lower()
+            if atten not in ["true", "false"]:
+                print("Invalid selection. Please choose 'True' or 'False'.")
+            else:
+                attention = atten == "true"
     
     # Task-Specific Arguments
     if task == "PFC" and mode == "test":
@@ -60,8 +67,9 @@ def main():
     print("\nFinal Configuration:")
     print(f"Task: {task}")
     print(f"Mode: {mode}")
-    if mode == "train" or mode == "test":
+    if mode in ['train', 'test', 'train-test', 'all']:
         print(f"Modality: {modality}")
+        print(f"Attention: {attention}")
     if mode == "process":
         print(f"Batch Processing: {batches}")
     if task == "PFC" and mode == "test" or task == "PLA":
@@ -72,51 +80,51 @@ def main():
     if task == "PLA":
         match mode:
             case "process":
-                PLA.process(task_dataset, batches)
+                PLA.process(task_dataset, batches, attention)
             case "train":
-                PLA.train(task_dataset, modality, batches)
+                PLA.train(task_dataset, modality, batches, attention)
             case "test":
-                PLA.test(task_dataset, modality, batches)
+                PLA.test(task_dataset, modality, batches, attention)
             case "train-test":
-                PLA.train(task_dataset, modality, batches)
-                PLA.test(task_dataset, modality, batches)
+                PLA.train(task_dataset, modality, batches, attention)
+                PLA.test(task_dataset, modality, batches, attention)
             case "all":
                 print(f"Note: Only {modality} will be trained and tested.")
-                PLA.process(task_dataset, batches)
-                PLA.train(task_dataset, modality, batches)
-                PLA.test(task_dataset, modality, batches)
+                PLA.process(task_dataset, batches, attention)
+                PLA.train(task_dataset, modality, batches, attention)
+                PLA.test(task_dataset, modality, batches, attention)
     elif task == "PFC":
         match mode:
             case "process":
-                PFC.process(batches)
+                PFC.process(batches, attention)
             case "train":
-                PFC.train(modality, batches)
+                PFC.train(modality, batches, attention)
             case "test":
-                PFC.test(task_dataset, modality, batches)
+                PFC.test(task_dataset, modality, batches, attention)
             case "train-test":
-                PFC.train(modality, batches)
-                PFC.test(task_dataset, modality, batches)
+                PFC.train(modality, batches, attention)
+                PFC.test(task_dataset, modality, batches, attention)
             case "all":
                 print(f"Note: Only {modality} will be trained and tested.")
-                PFC.process(batches)
-                PFC.train(modality, batches)
-                PFC.test(task_dataset, modality, batches)
+                PFC.process(batches, attention)
+                PFC.train(modality, batches, attention)
+                PFC.test(task_dataset, modality, batches, attention)
     elif task == "EI":
         match mode:
             case "process":
-                EI.process(batches)
+                EI.process(batches, attention)
             case "train":
-                EI.train(modality, batches)
+                EI.train(modality, batches, attention)
             case "test":
-                EI.test(modality)
+                EI.test(modality, attention)
             case "train-test":
-                EI.train(modality, batches)
-                EI.test(modality)
+                EI.train(modality, batches, attention)
+                EI.test(modality, attention)
             case "all":
                 print(f"Note: Only {modality} will be trained and tested.")
-                EI.process(batches)
-                EI.train(modality, batches)
-                EI.test(modality)
+                EI.process(batches, attention)
+                EI.train(modality, batches, attention)
+                EI.test(modality, attention)
     elif task == "MSP":
         pass
 

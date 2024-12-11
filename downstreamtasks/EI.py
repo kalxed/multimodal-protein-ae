@@ -11,13 +11,13 @@ from sklearn.model_selection import GroupKFold
 import xgboost as xgb
 from xgboost import XGBClassifier
 
-def process(batches):
+def process(batches, attention):
     if batches:
         print("Processing in batches is not supported for this task.")
         sys.exit(1)
     
     # Define the script directory and data folder
-    vgae_model, pae_model, esm_model, concrete_model = load_models()
+    vgae_model, pae_model, esm_model, concrete_model = load_models(attention)
     script_dir = os.path.dirname(os.path.abspath(__file__))
     target_dir = os.path.join(script_dir, "..", "data", "ProtDD")
 
@@ -72,14 +72,17 @@ def process(batches):
         point_cloud.append(encoded_point_cloud.detach().numpy())
 
     # Save the multimodal representations to pickle files
-    pickle_dump(data_folder, mulmodal, sequence, graph, point_cloud)
+    pickle_dump(data_folder, mulmodal, sequence, graph, point_cloud, attention)
     
 
-def load_data(modal, data_folder, batches):
+def load_data(modal, data_folder, batches, attention):
     if batches:
         print("Processing in batches is not supported for this task.")
         sys.exit(1)
-        
+    
+    if attention:
+        modal = f"attention-{modal}"
+    
     # Load input data (X) from a pickle file and labels (y) from a CSV file
     with open(f'{data_folder}/{modal}.pkl', 'rb') as f:
         tensor_list = pickle.load(f)
@@ -99,10 +102,10 @@ def load_data(modal, data_folder, batches):
     
     return X, y, fold_ids
 
-def train(modal, batches):
+def train(modal, batches, attention):
     data_folder = './data/ProtDD'
     # Load data and perform 10-fold cross-validation
-    X, y, fold_ids = load_data(modal, data_folder, batches)
+    X, y, fold_ids = load_data(modal, data_folder, batches, attention)
     cv = GroupKFold(n_splits=10)
     
     fold_results = []
@@ -113,7 +116,7 @@ def train(modal, batches):
         y_train, y_test = y.iloc[train_index], y.iloc[test_index]
 
         # Initialize and train the XGBoost classifier
-        model = XGBClassifier(learning_rate=0.1, n_estimators=1000, max_depth=5, random_state=42, tree_method='hist', objective="binary:logistic", eval_metric='logloss', early_stopping_rounds=10)
+        model = XGBClassifier(learning_rate=0.05, n_estimators=1000, max_depth=5, random_state=42, tree_method='hist', objective="binary:logistic", eval_metric='logloss', early_stopping_rounds=10)
         model.fit(X_train, y_train, eval_set=[(X_train, y_train), (X_test, y_test)])
 
         if not os.path.exists(f'{data_folder}/{modal}_model/'):
@@ -126,11 +129,11 @@ def train(modal, batches):
         
     print(f"Mean {modal} Accuracy: {np.mean([result['score'] for result in fold_results]):.4f}")
 
-def test(modal):
+def test(modal, attention):
     data_folder = './data/ProtDD'
     # Load data and perform 10-fold cross-validation for testing
     batches = False
-    X, y, fold_ids = load_data(modal, data_folder, batches)
+    X, y, fold_ids = load_data(modal, data_folder, batches, attention)
     cv = GroupKFold(n_splits=10)
 
     fold_scores = []

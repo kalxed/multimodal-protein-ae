@@ -32,7 +32,7 @@ def get_ligand_representation(ligand_smiles):
     fingerprint_tensor = torch.tensor(fingerprint, dtype=torch.float32)
     return fingerprint_tensor
 
-def process(dataset_name, batches):
+def process(dataset_name, batches, attention):
     """
     Process all modality with protein-ligand affinity data
     """
@@ -42,7 +42,7 @@ def process(dataset_name, batches):
     print("Number of samples:", len(df))
     
     # Load pre-trained models
-    vgae_model, pae_model, esm_model, concrete_model = load_models()
+    vgae_model, pae_model, esm_model, concrete_model = load_models(attention)
 
     mulmodal = []
     sequence = []
@@ -151,7 +151,7 @@ def setup(dataset, modal, batches):
 
     return model, X_train, y_train, X_test, y_test, likelihood, data_folder
 
-def train(dataset, modal, batches):
+def train(dataset, modal, batches, attention):
     # Define optimizer and loss
     model, X_train, y_train, X_test, y_test, likelihood, data_folder = setup(dataset, modal, batches)
     optimizer = torch.optim.Adam(model.parameters(), lr=0.1)
@@ -178,7 +178,7 @@ def train(dataset, modal, batches):
     # Save the trained model state
     torch.save(model.state_dict(), f'{data_folder}/{modal}_model_state.pth')
 
-def test(dataset, modal,batches):
+def test(dataset, modal,batches, attention):
     model, X_train, y_train, X_test, y_test, likelihood, data_folder = setup(dataset, modal, batches)
     # Load the trained model state
     data_folder = f'./data/{dataset}'

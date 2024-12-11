@@ -55,7 +55,7 @@ import torch
 import collections
 import transformers
 
-def load_models():
+def load_models(attention):
     # Ititialize VGAE model
     out_channels = 10
     num_features = 20
@@ -88,12 +88,19 @@ def load_models():
     esm_model = esm_model.to(device)
     
     # Load CAE model
-    input_dim = 640 * 3 # Input dimension after fusion
-    shared_dim = 640  # Shared dimension after fusion
-    latent_dim = 64  # Latent space size
-    temperature = .5  # Concrete distribution temperature
-    concrete_model_path = "./data/models/CAE-ATTENTION.pt"
-    concrete_model = ConcreteAutoencoder(input_dim, latent_dim, shared_dim, temperature).to(device)
+    if attention: 
+        input_dim = 640 * 3 # Input dimension after fusion
+        shared_dim = 640  # Shared dimension after fusion
+        latent_dim = 64  # Latent space size
+        temperature = .5  # Concrete distribution temperature
+        concrete_model_path = "./data/models/CAE-ATTENTION.pt"
+    else:
+        input_dim = 640 * 3 # Input dimension after fusion
+        shared_dim = 640  # Shared dimension after fusion
+        latent_dim = 64  # Latent space size
+        temperature = .5  # Concrete distribution temperature
+        concrete_model_path = "./data/models/CAE.pt"
+    concrete_model = ConcreteAutoencoder(input_dim, latent_dim, shared_dim, temperature, attention=attention).to(device)
     state_dict = torch.load(concrete_model_path, map_location=device)
     if isinstance(state_dict, collections.OrderedDict):
         concrete_model.load_state_dict(state_dict)
@@ -105,9 +112,13 @@ def load_models():
     print("Pre-trained models loaded successfully.")
     return vgae_model, pae_model, esm_model, concrete_model
 
-def pickle_dump(data_folder, mulmodal, sequence, graph, point_cloud):
-    with open(f'{data_folder}/multimodal.pkl', 'wb') as f:
-        pickle.dump(mulmodal, f)
+def pickle_dump(data_folder, mulmodal, sequence, graph, point_cloud, attention):
+    if attention:
+        with open(f'{data_folder}/attention-multimodal.pkl', 'wb') as f:
+            pickle.dump(mulmodal, f)
+    else: 
+        with open(f'{data_folder}/multimodal.pkl', 'wb') as f:
+            pickle.dump(mulmodal, f)
 
     with open(f'{data_folder}/sequence.pkl', 'wb') as f:
         pickle.dump(sequence, f)
@@ -308,7 +319,7 @@ def get_modalities(protein_path, ESM, VGAE, PAE, CAE):
     fused_rep = torch.cat((encoded_sequence, encoded_graph, encoded_point_cloud), dim=0)
     if fused_rep.size(0) == 1920:
         with torch.no_grad():
-            multimodal_representation = CAE.encode(fused_rep).squeeze().to("cpu")
+            multimodal_representation = CAE.encode(fused_rep.unsqueeze(0)).squeeze().to("cpu")
     else: 
         return None, None, None, None
 

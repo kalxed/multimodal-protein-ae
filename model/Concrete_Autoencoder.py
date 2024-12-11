@@ -23,7 +23,7 @@ class ConcreteDistribution(nn.Module):
         return y
 
 class ConcreteAutoencoder(nn.Module):
-    def __init__(self, input_dim, latent_dim, hidden_dim=640, temperature=1.0, dropout_rate=0.1):
+    def __init__(self, input_dim, latent_dim, hidden_dim=640, temperature=1.0, dropout_rate=0.1, attention=False):
         super(ConcreteAutoencoder, self).__init__()
         
         # Use hidden_dim if provided, else default to input_dim
@@ -37,11 +37,16 @@ class ConcreteAutoencoder(nn.Module):
             nn.Linear(hidden_dim, latent_dim)
         )
         
-        # Add attention mechanism to the encoder (self-attention)
+         # Add attention mechanism to the encoder (self-attention)
+        # self.use_attention = attention
+       
         ## Comment out if not using attention ##
         ## embed_dim = latent_dim if attention after encoding ##
         ## embed_dim = input_dim if attention before encoding ##
-        self.attention = nn.MultiheadAttention(embed_dim=input_dim, num_heads=4) 
+        if attention:
+            self.attention = nn.MultiheadAttention(embed_dim=input_dim, num_heads=4)
+        # else:    
+        # self.attention = nn.Identity() if not attention else self.attention
 
         # Decoder: Mapping latent space back to original input space
         self.decoder = nn.Sequential(
@@ -68,16 +73,20 @@ class ConcreteAutoencoder(nn.Module):
         """
         Encodes the input into the latent space.
         """
-        return self.encoder(fused_rep)
+        if self.attention:  
+            h, _ = self.attention(fused_rep, fused_rep, fused_rep)
+        else:
+            h = fused_rep
+        return self.encoder(h)
 
     def forward(self, fused_rep):
         """
         fused_rep: The representation coming from the attention fusion of multiple modalities
         """
         ## Attention before encoding ##
-        attention_rep, attention_weights = self.attention(fused_rep, fused_rep, fused_rep)
+        # attention_rep, attention_weights = self.attention(fused_rep, fused_rep, fused_rep)
         
-        encoded = self.encoder(attention_rep)
+        encoded = self.encode(fused_rep)
         
         concrete_rep = self.concrete(encoded)
         
