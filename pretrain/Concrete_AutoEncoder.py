@@ -28,10 +28,10 @@ class MultimodalDataset(Dataset):
 # Load the preprocessed data
 
 # Uncomment to load the point cloud data from all .pt files
-pointcloud_files = glob.glob('./data/multimodal/*.pt')
+files = glob.glob('./data/multimodal/*.pt')
 dataset = []
 
-for file in pointcloud_files:
+for file in files:
     data = torch.load(file, weights_only=False)
     dataset.append(data)
 

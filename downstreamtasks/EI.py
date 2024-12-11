@@ -95,13 +95,13 @@ def load_data(modal, data_folder, batches):
         else:
             data = [tensor.detach().numpy() for tensor in tensor_list]  # In case they are PyTorch tensors
         
-        if modal == "graph":
-            X = data
-        else:
-            X = np.array(data)
+        # if modal == "graph":
+        #     X = data
+        # else:
+        X = np.array(data)
 
     df = pd.read_csv(f'{data_folder}/label.csv')
-    df = df[df['id'] != '1AA6']
+    df = df[df['id'] != '1AA6'] # Remove the row with the non-standard amino acid
     y = df['label']
     fold_ids = df['fold_id']
     
@@ -112,6 +112,8 @@ def train(modal, batches):
     # Load data and perform 10-fold cross-validation
     X, y, fold_ids = load_data(modal, data_folder, batches)
     cv = GroupKFold(n_splits=10)
+    
+    fold_results = []
 
     for i, (train_index, test_index) in enumerate(cv.split(X, y, groups=fold_ids)):
         # Split the data into training and testing sets for each fold
@@ -120,9 +122,9 @@ def train(modal, batches):
 
         # Initialize and train the XGBoost classifier
         model = XGBClassifier(
-            learning_rate=0.1,
-            n_estimators=1000,
-            max_depth=5,
+            learning_rate=0.05,
+            n_estimators=2000,
+            max_depth=7,
             seed=42,  # Use seed instead of random_state
             tree_method='hist',
             objective="binary:logistic",
@@ -138,6 +140,11 @@ def train(modal, batches):
             os.makedirs(f'{data_folder}/{modal}_model/')
         # Save the trained model for each fold
         model.save_model(f"{data_folder}/{modal}_model/fold{i+1}.json")
+        
+        score = model.score(X_test, y_test)  # Replace with appropriate metric
+        fold_results.append({'fold': i + 1, 'score': score})
+        
+    print(f"Mean {modal} Accuracy: {np.mean([result['score'] for result in fold_results]):.4f}")
 
 def test(modal):
     data_folder = './data/ProtDD'

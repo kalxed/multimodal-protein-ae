@@ -63,6 +63,11 @@ def process(dataset_name, batches):
     ):
         pdb_path = f"{data_folder}/pdb/{protein_name}.pdb"
         multimodal_representation, encoded_sequence, encoded_graph, encoded_point_cloud = get_modalities(pdb_path, esm_model, vgae_model, pae_model, concrete_model)
+        
+        # Skip the sample if any of the modalities are None
+        if any(x is None for x in [multimodal_representation, encoded_sequence, encoded_graph, encoded_point_cloud]):
+            continue
+        
         ligand_representation = get_ligand_representation(ligand_smiles)
 
         # Concatenate multimodal representation with ligand representation
@@ -77,7 +82,6 @@ def process(dataset_name, batches):
         graph.append(graph_feature)
         point_cloud.append(point_cloud_feature)
         
-        # TODO: if needed. commented out for now
         # Save and reset data after reaching the batch size
         if batches:
             if (i + 1) % batch_size == 0 or (i + 1) == len(df):
@@ -93,37 +97,6 @@ def process(dataset_name, batches):
     if not batches:
         pickle_dump(data_folder, mulmodal, sequence, graph, point_cloud)
     print("Features processed successfully.")
-    
-# def load_batch_data(modality_folder, modality):
-#     batch_files = [os.path.join(modality_folder, name) for name in os.listdir(modality_folder) if name.endswith('.pkl')]
-
-#     all_data = []
-#     for batch_file in batch_files:
-#         with open(batch_file, 'rb') as f:
-#             # tensor_list = pickle.load(f)
-#             data = pickle.load(f)
-#             all_data.extend(data)
-            
-#     if modality == "graph":
-#         # print(len(all_data))
-#         return all_data
-    
-#     return np.array(all_data)
-    
-# def load_data(data_folder, modal):
-#     with open(f'{data_folder}/{modal}.pkl', 'rb') as f:
-#         tensor_list = pickle.load(f)
-#         data = [tensor.detach().numpy() for tensor in tensor_list]
-            
-#     return np.array(data)
-
-# def pad_truc(seq, max_len):
-#     if len(seq) < max_len:
-#         # Pad the sequence
-#         return np.pad(seq, (0, max_len - len(seq)), 'constant')
-#     else:
-#         # Truncate the sequence
-#         return seq[:max_len]
 
 def setup(dataset, modal, batches):
     data_folder = f'./data/{dataset}'
@@ -157,10 +130,10 @@ def setup(dataset, modal, batches):
         test_ids = ast.literal_eval(test_ids_str)
 
         # Handle the case for graph data and non-graph data separately
-        if modal == "graph":
-            train_ids = np.setdiff1d(np.arange(len(X)), test_ids)
-        else:
-            train_ids = np.setdiff1d(np.arange(X.shape[0]), test_ids)
+        # if modal == "graph":
+        #     train_ids = np.setdiff1d(np.arange(len(X)), test_ids)
+        # else:
+        train_ids = np.setdiff1d(np.arange(X.shape[0]), test_ids)
 
     # Print the sizes of the training and test sets
     print(f'Size of Training Set: {len(train_ids)} samples')
@@ -168,24 +141,24 @@ def setup(dataset, modal, batches):
     
     # Ensure test_ids are within the valid range
     test_ids = [i for i in test_ids if i < len(X)]
-    print(f'Filtered Test IDs: {test_ids}')
+    # print(f'Filtered Test IDs: {test_ids}')
 
     # Split the data into training and test sets
-    if modal == "graph":
-        # If dealing with graphs, split the list of Data objects into train/test
-        X_train = [X[i] for i in train_ids]
-        X_test = [X[i] for i in test_ids]
+    # if modal == "graph":
+    #     # If dealing with graphs, split the list of Data objects into train/test
+    #     X_train = [X[i] for i in train_ids]
+    #     X_test = [X[i] for i in test_ids]
         
-        # Set the dimensionality of graphs based on the median length 
-        lengths = [len(sample) for sample in X]
-        median_length = int(np.median(lengths))
-        X_train = [pad_truc(sample, median_length) for sample in X_train]
-        X_test = [pad_truc(sample, median_length) for sample in X_train]
+    #     # Set the dimensionality of graphs based on the median length 
+    #     lengths = [len(sample) for sample in X]
+    #     median_length = int(np.median(lengths))
+    #     X_train = [pad_truc(sample, median_length) for sample in X_train]
+    #     X_test = [pad_truc(sample, median_length) for sample in X_train]
         
-    else:
-        # For non-graph modalities (like sequence, point cloud, etc.)
-        X_train = X[train_ids]
-        X_test = X[test_ids]
+    # else:
+    #     # For non-graph modalities (like sequence, point cloud, etc.)
+    X_train = X[train_ids]
+    X_test = X[test_ids]
         
     y_train = y[train_ids]
     y_test = y[test_ids]

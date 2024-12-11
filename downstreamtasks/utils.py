@@ -88,18 +88,19 @@ def load_models():
     esm_model = esm_model.to(device)
     
     # Load CAE model
-    input_dim = 640 * 3  # Input dimension after fusion
+    input_dim = 640 * 3 # Input dimension after fusion
     shared_dim = 640  # Shared dimension after fusion
     latent_dim = 64  # Latent space size
     temperature = .5  # Concrete distribution temperature
-    concrete_model_path = "./data/models/CAE.pt"
-    concrete_model = ConcreteAutoencoder(input_dim, shared_dim, latent_dim, temperature).to(device)
+    concrete_model_path = "./data/models/CAE-ATTENTION.pt"
+    concrete_model = ConcreteAutoencoder(input_dim, latent_dim, shared_dim, temperature).to(device)
     state_dict = torch.load(concrete_model_path, map_location=device)
     if isinstance(state_dict, collections.OrderedDict):
         concrete_model.load_state_dict(state_dict)
         concrete_model.eval()
     else:
         raise ValueError("The CAE file does not contain a valid state dictionary.")
+    # concrete_model = None
     
     print("Pre-trained models loaded successfully.")
     return vgae_model, pae_model, esm_model, concrete_model
@@ -261,7 +262,23 @@ def read_pdb(pdb_path):
 
     return sequence, graph, point_cloud
 
-def get_modalities(protein_path, ESM, VGAE, PAE, Fusion):
+# Function to process and adjust encoded graph data to a fixed size
+def process_encoded_graph(encoded_graph, edge_index, fixed_size=640, feature_dim=10):
+    num_nodes = encoded_graph.size(0)
+    if num_nodes > fixed_size:
+        ratio = fixed_size / num_nodes
+        with torch.no_grad():
+            pooling_layer = TopKPooling(in_channels=feature_dim, ratio=ratio)
+            pooled_x, edge_index, edge_attr, batch, perm, score = pooling_layer(encoded_graph, edge_index)
+        processed_encoded_graph = pooled_x
+    else:
+        padding_size = fixed_size - num_nodes
+        zero_padding = torch.zeros(padding_size, feature_dim)
+        processed_encoded_graph = torch.cat((encoded_graph, zero_padding), dim=0)
+
+    return processed_encoded_graph
+
+def get_modalities(protein_path, ESM, VGAE, PAE, CAE):
     # Check file_extension
     file_name, file_extension = os.path.splitext(protein_path)
     if file_extension == ".pdb":
@@ -270,7 +287,7 @@ def get_modalities(protein_path, ESM, VGAE, PAE, Fusion):
         sequence, graph, point_cloud = read_hdf5(protein_path)
 
     if sequence is None or graph is None or point_cloud is None:
-        print(f'Failed {protein_path}')
+        print(f'Failed {file_name}')
         return None, None, None, None
     
     # Pass the sequence data through ESM for encoding
@@ -283,6 +300,7 @@ def get_modalities(protein_path, ESM, VGAE, PAE, Fusion):
     # Pass the graph data through VGAE for encoding
     with torch.no_grad():
         encoded_graph = VGAE.encode(graph.x, graph.edge_index).to("cpu")
+        encoded_graph = process_encoded_graph(encoded_graph, graph.edge_index)
         encoded_graph = torch.mean(encoded_graph, dim=1)
         encoded_graph = z_score_standardization(encoded_graph)
 
@@ -290,16 +308,13 @@ def get_modalities(protein_path, ESM, VGAE, PAE, Fusion):
     with torch.no_grad():
         encoded_point_cloud = PAE.encode(point_cloud[None, :]).squeeze().to("cpu")
         encoded_point_cloud = z_score_standardization(encoded_point_cloud)
-
-    # Initialize AttentionFusion
-    input_dims = {"sequence": encoded_sequence.shape[0], "graph": encoded_graph.shape[0], "point_cloud": encoded_point_cloud.shape[0]}
-    shared_dim = 640 * 3
-    attention_fusion = AttentionFusion(input_dims, shared_dim)
-
-    fused_rep, _ = attention_fusion(encoded_sequence, encoded_graph, encoded_point_cloud)
-
-    with torch.no_grad():
-        multimodal_representation = Fusion.encode(fused_rep).squeeze().to("cpu")
+    
+    fused_rep = torch.cat((encoded_sequence, encoded_graph, encoded_point_cloud), dim=0)
+    if fused_rep.size(0) == 1920:
+        with torch.no_grad():
+            multimodal_representation = CAE.encode(fused_rep).squeeze().to("cpu")
+    else: 
+        return None, None, None, None
 
     return multimodal_representation, encoded_sequence, encoded_graph, encoded_point_cloud
 
@@ -350,7 +365,7 @@ def read_hdf5(hdf5_path):
     try:
         sequence = "".join(label_encoder.inverse_transform(amino_acid_indices))
     except ValueError as e:
-        print(f"Error converting amino acid indices: {e}")
+        print(f"Error converting amino acid indices at {hdf5_path}: {e}")
         return None, None, None
 
     

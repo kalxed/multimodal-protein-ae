@@ -41,7 +41,7 @@ class ConcreteAutoencoder(nn.Module):
         ## Comment out if not using attention ##
         ## embed_dim = latent_dim if attention after encoding ##
         ## embed_dim = input_dim if attention before encoding ##
-        self.attention = nn.MultiheadAttention(embed_dim=latent_dim, num_heads=4) 
+        self.attention = nn.MultiheadAttention(embed_dim=input_dim, num_heads=4) 
 
         # Decoder: Mapping latent space back to original input space
         self.decoder = nn.Sequential(
@@ -75,26 +75,26 @@ class ConcreteAutoencoder(nn.Module):
         fused_rep: The representation coming from the attention fusion of multiple modalities
         """
         ## Attention before encoding ##
-        # attention_rep, attention_weights = self.attention(fused_rep, fused_rep, fused_rep)
+        attention_rep, attention_weights = self.attention(fused_rep, fused_rep, fused_rep)
         
-        # encoded = self.encoder(attention_rep)
+        encoded = self.encoder(attention_rep)
         
-        # concrete_rep = self.concrete(encoded)
-        
-        # reconstructed = self.decoder(concrete_rep)
-        
-        # return reconstructed
-    
-        ## Attention after encoding ##
-        encoded = self.encoder(fused_rep)
-        
-        attention_rep, attention_weights = self.attention(encoded, encoded, encoded)
-        
-        concrete_rep = self.concrete(attention_rep)
+        concrete_rep = self.concrete(encoded)
         
         reconstructed = self.decoder(concrete_rep)
         
         return reconstructed
+    
+        ## Attention after encoding ##
+        # encoded = self.encoder(fused_rep)
+        
+        # attention_rep, attention_weights = self.attention(encoded, encoded, encoded)
+        
+        # concrete_rep = self.concrete(attention_rep)
+        
+        # reconstructed = self.decoder(concrete_rep)
+        
+        # return reconstructed
         
         ## No attention mechanism ##
         # encoded = self.encoder(fused_rep)
