@@ -23,7 +23,7 @@ class ConcreteDistribution(nn.Module):
         return y
 
 class ConcreteAutoencoder(nn.Module):
-    def __init__(self, input_dim, latent_dim, hidden_dim=640, temperature=1.0, dropout_rate=0.1):
+    def __init__(self, input_dim, latent_dim, hidden_dim=640, temperature=1.0, dropout_rate=0.1, attention=False):
         super(ConcreteAutoencoder, self).__init__()
         
         # Use hidden_dim if provided, else default to input_dim
@@ -48,8 +48,11 @@ class ConcreteAutoencoder(nn.Module):
         # Concrete distribution parameters
         self.temperature = temperature
         self.concrete = ConcreteDistribution(temperature=self.temperature, hard=False)
+
+        self.use_attention = attention
+        if (attention):
+            self.attention = nn.MultiheadAttention(embed_dim=input_dim, num_heads=4)
         
-        self.attention = nn.MultiheadAttention(embed_dim=input_dim, num_heads=4)
         # Apply weight initialization
         self.apply(self.init_weights)
 
@@ -63,9 +66,11 @@ class ConcreteAutoencoder(nn.Module):
         """
         Encodes the input into the latent space.
         """
-        attention_rep, _ = self.attention(fused_rep, fused_rep, fused_rep)
-
-        encoded = self.encoder(attention_rep)
+        if self.use_attention:
+            h, _ = self.attention(fused_rep, fused_rep, fused_rep)
+        else:
+            h = fused_rep
+        encoded = self.encoder(h)
         return encoded
 
     def forward(self, fused_rep):
