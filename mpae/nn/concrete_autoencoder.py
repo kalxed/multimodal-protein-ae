@@ -3,27 +3,9 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.nn.init as init
 
-# Concrete Distribution with Straight-Through Estimator
-class ConcreteDistribution(nn.Module):
-    def __init__(self, temperature=1.0, hard=False):
-        super(ConcreteDistribution, self).__init__()
-        self.temperature = temperature
-        self.hard = hard
-
-    def forward(self, logits):
-        noise = torch.rand_like(logits).log().neg().log().neg()
-        y = logits + noise
-        y = F.softmax(y / self.temperature, dim=-1)
-
-        # Hard version: Take the one-hot vector with max probability
-        if self.hard:
-            k = torch.argmax(y, dim=-1)
-            y_hard = torch.zeros_like(y).scatter_(-1, k.unsqueeze(-1), 1.0)
-            y = (y_hard - y).detach() + y  # Straight-through estimator
-        return y
 
 class ConcreteAutoencoder(nn.Module):
-    def __init__(self, input_dim, latent_dim, hidden_dim=640, temperature=1.0, dropout_rate=0.1, attention=False):
+    def __init__(self, input_dim, latent_dim, hidden_dim=640, dropout_rate=0.1, attention=False):
         super(ConcreteAutoencoder, self).__init__()
         
         # Use hidden_dim if provided, else default to input_dim
@@ -45,10 +27,6 @@ class ConcreteAutoencoder(nn.Module):
             nn.Linear(hidden_dim, input_dim)
         )
 
-        # Concrete distribution parameters
-        self.temperature = temperature
-        self.concrete = ConcreteDistribution(temperature=self.temperature, hard=False)
-
         self.use_attention = attention
         if (attention):
             self.attention = nn.MultiheadAttention(embed_dim=input_dim, num_heads=4)
@@ -61,7 +39,10 @@ class ConcreteAutoencoder(nn.Module):
             init.kaiming_normal_(m.weight, a=0.01, mode='fan_in', nonlinearity='leaky_relu')
             if m.bias is not None:
                 init.zeros_(m.bias)
-                
+
+    def update_temp(self, new_temp):
+        self.concrete.temperature = new_temp
+
     def encode(self, fused_rep):
         """
         Encodes the input into the latent space.
@@ -79,12 +60,8 @@ class ConcreteAutoencoder(nn.Module):
         """
         # Encoder produces logits
         encoded = self.encode(fused_rep)
-        
-        # Apply concrete distribution to get discrete latent representation
-        # concrete_rep = self.concrete(encoded)
-        concrete_rep = encoded
-
+ 
         # Decoder reconstructs input from the latent representation
-        reconstructed = self.decoder(concrete_rep)
-        
+        reconstructed = self.decoder(encoded)
+
         return reconstructed

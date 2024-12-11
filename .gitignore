@@ -158,6 +158,7 @@ cython_debug/
 data/
 proteins
 .vscode/
+models/
 
 **/.DS_Store
 /logs
