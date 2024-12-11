@@ -18,6 +18,7 @@ input_dim = 640 * 3  # Input dimension after fusion
 shared_dim = 640  # Shared dimension after fusion
 latent_dim = 64  # Latent space size
 temperature = .5  # Concrete distribution temperature
+final_temperature = 0.125
 
 torch.serialization.add_safe_globals([torch_geometric.data.data.DataEdgeAttr, 
                                       torch_geometric.data.data.DataTensorAttr,
@@ -132,7 +133,7 @@ def test(test_loader: torch.utils.data.DataLoader, model_path, criterion, device
 
 def train(train_loader, val_loader, criterion, device, num_epochs, model_path):
     model = ConcreteAutoencoder(input_dim=input_dim, hidden_dim=shared_dim, latent_dim=latent_dim, temperature=temperature).to(device)
-
+    new_temp = temperature
     # Define optimizer (Adam)
     optimizer = torch.optim.Adam(model.parameters(), lr=0.0001, weight_decay=1e-5)
     # Training loop
@@ -152,6 +153,8 @@ def train(train_loader, val_loader, criterion, device, num_epochs, model_path):
             loss.backward()
             total_loss += loss.item()
             optimizer.step()
+
+        model.update_temp(new_temp = temperature * ((final_temperature / temperature) ** (epoch / (num_epochs+1))))
 
         if epoch % 5 == 0:
             train_loss = total_loss / len(train_loader)

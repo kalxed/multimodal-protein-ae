@@ -61,6 +61,9 @@ class ConcreteAutoencoder(nn.Module):
             init.kaiming_normal_(m.weight, a=0.01, mode='fan_in', nonlinearity='leaky_relu')
             if m.bias is not None:
                 init.zeros_(m.bias)
+
+    def update_temp(self, new_temp):
+        self.concrete.temperature = new_temp
                 
     def encode(self, fused_rep):
         """
