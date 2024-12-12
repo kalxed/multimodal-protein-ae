@@ -1,9 +1,6 @@
-"""
-REPLACE!!!!
-"""
-
-from torch_geometric.nn import GCNConv, VGAE
 import torch
+from torch_geometric.nn import VGAE, GCNConv
+
 
 class VariationalGCNEncoder(torch.nn.Module):
     def __init__(self, in_channels, out_channels):

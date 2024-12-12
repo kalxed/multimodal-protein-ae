@@ -155,12 +155,13 @@ dmypy.json
 cython_debug/
 
 # Files to ignore
-data/*
-*.pt
-*.pkl
+data/
+proteins
+.vscode/
+models/
 
 **/.DS_Store
-/log
+/logs
 
 
 # PyCharm
