@@ -6,10 +6,9 @@ from tqdm import tqdm
 from rdkit import Chem
 from rdkit.Chem import rdFingerprintGenerator
 from utils import *
-sys.path.append(".")
-from model.ESM import *
-from model.vgae import *
-from model.PAE import *
+from mpae.nn.esm import *
+from mpae.nn.vgcn import *
+from mpae.nn.pae import *
 import gpytorch
 import ast
 

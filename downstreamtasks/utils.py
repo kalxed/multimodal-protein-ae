@@ -38,13 +38,12 @@ ppb = PPBuilder()
 
 import sys
 
-sys.path.append(".")
 
-from model.Concrete_Autoencoder import *
-from model.ESM import *
-from model.VGAE import *
-from model.PAE import *
-from model.Attention import *
+
+from mpae.nn.cae import *
+from mpae.nn.esm import *
+from mpae.nn.vgcn import *
+from mpae.nn.pae import *
 
 import torch
 import collections
@@ -89,7 +88,7 @@ def load_models():
     latent_dim = 64  # Latent space size
     temperature = .5  # Concrete distribution temperature
     concrete_model_path = "./models/CAE-attention-no-concrete.pt"
-    concrete_model = ConcreteAutoencoder(input_dim, latent_dim, shared_dim, temperature).to(device)
+    concrete_model = AttentiveCementAutoEncoder(input_dim, latent_dim, shared_dim, temperature).to(device)
     state_dict = torch.load(concrete_model_path, map_location=device)
     if isinstance(state_dict, collections.OrderedDict):
         concrete_model.load_state_dict(state_dict)
@@ -312,7 +311,7 @@ def get_modalities(protein_path, ESM, VGAE, PAE, CAE, device):
     fused_rep = torch.cat((encoded_sequence, encoded_graph, encoded_point_cloud), dim=0)
     if fused_rep.size(0) == 1920:
         with torch.no_grad():
-            multimodal_representation = CAE.encode(fused_rep).squeeze()#.to("cpu")
+            multimodal_representation = CAE.encode(fused_rep.unsqueeze(0)).squeeze()#.to("cpu")
     else: 
         return None, None, None, None
 

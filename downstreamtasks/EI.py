@@ -6,10 +6,9 @@ import pandas as pd
 import sys
 from tqdm import tqdm
 from utils import *
-sys.path.append(".")
-from model.ESM import *
-from model.VGAE import *
-from model.PAE import *
+from mpae.nn.esm import *
+from mpae.nn.vgcn import *
+from mpae.nn.pae import *
 from sklearn.metrics import accuracy_score
 
 from sklearn.model_selection import GroupKFold
