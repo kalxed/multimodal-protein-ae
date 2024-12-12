@@ -41,10 +41,8 @@ class STN3d(nn.Module):
         x = self.fc3(x)
         # Generate identity matrix for transformation
         iden = Variable(torch.from_numpy(np.array([1, 0, 0, 0, 1, 0, 0, 0, 1]).astype(np.float32))).view(1, 9).repeat(batchsize, 1)
-        if x.is_cuda:
-            iden = iden.cuda()
         # Add identity transformation
-        x = x + iden
+        x = x + iden.to(x.device)
         x = x.view(-1, 3, 3)
         return x
 
