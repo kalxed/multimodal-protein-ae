@@ -70,23 +70,21 @@ def main():
     # TODO: Implement the downstream task logic based on the selected configuration
     
     if task == "PLA":
-        match mode:
-            case "process":
-                PLA.process(task_dataset, batches)
-            case "train":
+        if mode== "process":
+            PLA.process(task_dataset, batches)
+        elif mode == "train":
                 PLA.train(task_dataset, modality, batches)
-            case "test":
+        elif mode ==  "test":
                 PLA.test(task_dataset, modality)
     elif task == "PFC":
         pass
     elif task == "EI":
-        match mode:
-            case "process":
-                EI.process(batches)
-            case "train":
-                EI.train(modality, batches)
-            case "test":
-                EI.test(modality)
+        if mode == "process":
+            EI.process(batches)
+        elif mode== "train":
+            EI.train(modality, batches)
+        elif mode== "test":
+            EI.test(modality)
     elif task == "MSP":
         pass
 
