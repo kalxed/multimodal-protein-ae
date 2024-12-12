@@ -28,12 +28,7 @@ from torch_geometric.data import Data
 from Bio.PDB import PDBParser, PPBuilder, Polypeptide
 
 # Check if GPU is available
-if torch.cuda.is_available():
-    device = torch.device("cuda")
-    print("Using GPU:", torch.cuda.get_device_name(0))
-else:
-    device = torch.device("cpu")
-    print("No GPU available, using CPU.")
+device = torch.device("cuda" if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu")
 
 model_token = "facebook/esm2_t30_150M_UR50D"
 tokenizer = transformers.AutoTokenizer.from_pretrained(model_token)

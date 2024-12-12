@@ -8,7 +8,7 @@ from tqdm import tqdm
 from utils import *
 sys.path.append(".")
 from model.ESM import *
-from model.vgae import *
+from model.VGAE import *
 from model.PAE import *
 from sklearn.metrics import accuracy_score
 
@@ -16,12 +16,7 @@ from sklearn.model_selection import GroupKFold
 import xgboost as xgb
 from xgboost import XGBClassifier
 
-if torch.cuda.is_available():
-    device = torch.device("cuda")
-    print("Using GPU:", torch.cuda.get_device_name(0))
-else:
-    device = torch.device("cpu")
-    print("No GPU available, using CPU.")
+device = torch.device("cuda" if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu")
 
 def process(batches):
     if batches:
@@ -77,7 +72,7 @@ def process(batches):
         hdf5_path = f'/{data_folder}/data/{hdf5_file}.hdf5'
         
         # Get multimodal representations from the HDF5 file using pre-trained models
-        multimodal_representation, encoded_sequence, encoded_graph, encoded_point_cloud = get_modalities(hdf5_path, esm_model, vgae_model, pae_model, concrete_model, device)
+        multimodal_representation, encoded_sequence, encoded_graph, encoded_point_cloud = get_modalities(hdf5_path, esm_model, vgae_model, pae_model, concrete_model, device=device)
         
         if any(x is None for x in [multimodal_representation, encoded_sequence, encoded_graph, encoded_point_cloud]):
             continue
