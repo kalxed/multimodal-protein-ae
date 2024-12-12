@@ -23,9 +23,9 @@ class ConcreteDistribution(nn.Module):
             y = (y_hard - y).detach() + y  # Straight-through estimator
         return y
 
-class ConcreteAutoencoder(nn.Module):
+class ConcreteAutoEncoder(nn.Module):
     def __init__(self, input_dim, latent_dim, hidden_dim=640, temperature=1.0, dropout_rate=0.1):
-        super(ConcreteAutoencoder, self).__init__()
+        super(ConcreteAutoEncoder, self).__init__()
         
         # Use hidden_dim if provided, else default to input_dim
         hidden_dim = hidden_dim or input_dim
@@ -84,7 +84,7 @@ class ConcreteAutoencoder(nn.Module):
         
         return reconstructed
 
-class AttentiveConcreteAutoEncoder(ConcreteAutoencoder):
+class AttentiveConcreteAutoEncoder(ConcreteAutoEncoder):
     def __init__(self, input_dim, latent_dim, hidden_dim=640, temperature=1, dropout_rate=0.1):
         super().__init__(input_dim=input_dim, latent_dim=latent_dim, hidden_dim=hidden_dim, temperature=temperature, dropout_rate=dropout_rate)
         self.attention = nn.MultiheadAttention(embed_dim=input_dim, num_heads=4)

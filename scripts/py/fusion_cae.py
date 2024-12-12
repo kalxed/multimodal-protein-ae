@@ -32,7 +32,7 @@ def get_model(concrete, attention, path=None, device=torch.device("cpu")) -> nn.
         if attention:
             model = cae.AttentiveConcreteAutoEncoder(**kwargs)
         else:
-            model = cae.ConcreteAutoencoder(**kwargs)
+            model = cae.ConcreteAutoEncoder(**kwargs)
     elif attention:
         model = cae.AttentiveCementAutoEncoder(**kwargs)
     else:
