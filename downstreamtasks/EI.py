@@ -16,6 +16,13 @@ from sklearn.model_selection import GroupKFold
 import xgboost as xgb
 from xgboost import XGBClassifier
 
+if torch.cuda.is_available():
+    device = torch.device("cuda")
+    print("Using GPU:", torch.cuda.get_device_name(0))
+else:
+    device = torch.device("cpu")
+    print("No GPU available, using CPU.")
+
 def process(batches):
     if batches:
         print("Processing in batches is not supported for this task.")
@@ -23,6 +30,11 @@ def process(batches):
     
     # Define the script directory and data folder
     vgae_model, pae_model, esm_model, concrete_model = load_models()
+    vgae_model = vgae_model.to(device)
+    pae_model = pae_model.to(device)
+    esm_model = esm_model.to(device)
+    concrete_model = concrete_model.to(device)
+
     script_dir = os.path.dirname(os.path.abspath(__file__))
     target_dir = os.path.join(script_dir, "..", "data", "ProtDD")
 
@@ -65,16 +77,16 @@ def process(batches):
         hdf5_path = f'/{data_folder}/data/{hdf5_file}.hdf5'
         
         # Get multimodal representations from the HDF5 file using pre-trained models
-        multimodal_representation, encoded_sequence, encoded_graph, encoded_point_cloud = get_modalities(hdf5_path, esm_model, vgae_model, pae_model, concrete_model)
+        multimodal_representation, encoded_sequence, encoded_graph, encoded_point_cloud = get_modalities(hdf5_path, esm_model, vgae_model, pae_model, concrete_model, device)
         
         if any(x is None for x in [multimodal_representation, encoded_sequence, encoded_graph, encoded_point_cloud]):
             continue
         
         # Append the representations to their respective lists
-        mulmodal.append(multimodal_representation.detach().numpy())
-        sequence.append(encoded_sequence.detach().numpy())
-        graph.append(encoded_graph.detach().numpy())
-        point_cloud.append(encoded_point_cloud.detach().numpy())
+        mulmodal.append(multimodal_representation.detach().cpu().numpy())
+        sequence.append(encoded_sequence.detach().cpu().numpy())
+        graph.append(encoded_graph.detach().cpu().numpy())
+        point_cloud.append(encoded_point_cloud.detach().cpu().numpy())
 
     # Save the multimodal representations to pickle files
     pickle_dump(data_folder, mulmodal, sequence, graph, point_cloud)
@@ -101,7 +113,9 @@ def load_data(modal, data_folder, batches):
         X = np.array(data)
 
     df = pd.read_csv(f'{data_folder}/label.csv')
-    df = df[df['id'] != '1AA6'] # Remove the row with the non-standard amino acid
+    idx = df['id'] != '1AA6'
+    df = df[idx] # Remove the row with the non-standard amino acid
+    X = X[idx]
     y = df['label']
     fold_ids = df['fold_id']
     

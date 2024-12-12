@@ -20,7 +20,7 @@ import numpy as np
 import transformers
 import os
 import h5py
-from sklearn.neighbors import radius_neighbors_graph
+from sklearn.neighbors import radius_neighbors_graph, kneighbors_graph
 from sklearn.preprocessing import LabelEncoder
 from torch_geometric.nn import TopKPooling
 from torch_geometric.utils import negative_sampling
@@ -60,14 +60,15 @@ def load_models():
     out_channels = 10
     num_features = 20
     vgae_model_path = "./data/models/VGAE.pt"
-    vgae_model = VGAE(VariationalGCNEncoder(num_features, out_channels))
+    vgae_model = torch.load(vgae_model_path, map_location=device)
+    #vgae_model = VGAE(VariationalGCNEncoder(num_features, out_channels))
     
-    state_dict = torch.load(vgae_model_path, map_location=device)
-    if isinstance(state_dict, collections.OrderedDict):
-        vgae_model.load_state_dict(state_dict)
-        vgae_model.eval()
-    else:
-        raise ValueError("The VGAE file does not contain a valid state dictionary.")
+    #state_dict = torch.load(vgae_model_path, map_location=device)
+    #if isinstance(state_dict, collections.OrderedDict):
+    #    vgae_model.load_state_dict(state_dict)
+    #    vgae_model.eval()
+    #else:
+    #    raise ValueError("The VGAE file does not contain a valid state dictionary.")
 
     # Load PAE model
     k = 640
@@ -193,9 +194,13 @@ def get_aa_label_encoder(file_type):
     label_encoder = LabelEncoder()
     label_encoder.fit(list(amino_acids))
     return label_encoder, amino_acids
+amino_acids = 'ACDEFGHIKLMNPQRSTVWYX'
+label_encoder = LabelEncoder()
+label_encoder.fit(list(amino_acids))
+num_amino_acids = len(amino_acids)
 
 def one_hot_encode_amino_acid(sequence, file_type):
-    label_encoder, amino_acids = get_aa_label_encoder(file_type)
+    # label_encoder, amino_acids = get_aa_label_encoder(file_type)
     
     # Ensure the sequence contains only valid amino acids
     try:
@@ -233,7 +238,7 @@ def read_pdb(pdb_path):
     coordinates = np.array(coordinates, dtype=np.float32)
     node_features = one_hot_encode_amino_acid(sequence, "pdb")
     x = torch.tensor(node_features, dtype=torch.float32)
-    edge_index = radius_neighbors_graph(coordinates, radius, mode='connectivity', include_self='auto')
+    edge_index = kneighbors_graph(coordinates, radius, mode='connectivity', include_self='auto')
     edge_index = edge_index.nonzero()
     edge_index = np.array(edge_index)
     edge_index = torch.from_numpy(edge_index).to(torch.long).contiguous()
@@ -278,7 +283,7 @@ def process_encoded_graph(encoded_graph, edge_index, fixed_size=640, feature_dim
 
     return processed_encoded_graph
 
-def get_modalities(protein_path, ESM, VGAE, PAE, CAE):
+def get_modalities(protein_path, ESM, VGAE, PAE, CAE, device):
     # Check file_extension
     file_name, file_extension = os.path.splitext(protein_path)
     if file_extension == ".pdb":
@@ -289,30 +294,30 @@ def get_modalities(protein_path, ESM, VGAE, PAE, CAE):
     if sequence is None or graph is None or point_cloud is None:
         print(f'Failed {file_name}')
         return None, None, None, None
-    
+    sequence = sequence.to(device) 
     # Pass the sequence data through ESM for encoding
     with torch.no_grad():
         encoded_sequence = ESM(sequence, output_hidden_states=True)["hidden_states"][
             -1
-        ][0, -1].to("cpu")
+        ][0, -1]#.to("cpu")
         encoded_sequence = z_score_standardization(encoded_sequence)
-
+    graph = graph.to(device)
     # Pass the graph data through VGAE for encoding
     with torch.no_grad():
-        encoded_graph = VGAE.encode(graph.x, graph.edge_index).to("cpu")
+        encoded_graph = VGAE.encode(graph.x, graph.edge_index)#.to("cpu")
         encoded_graph = process_encoded_graph(encoded_graph, graph.edge_index)
         encoded_graph = torch.mean(encoded_graph, dim=1)
         encoded_graph = z_score_standardization(encoded_graph)
-
+    point_cloud = point_cloud.to(device)
     # Pass the point cloud data through PAE for encoding
     with torch.no_grad():
-        encoded_point_cloud = PAE.encode(point_cloud[None, :]).squeeze().to("cpu")
+        encoded_point_cloud = PAE.encode(point_cloud[None, :]).squeeze()#.to("cpu")
         encoded_point_cloud = z_score_standardization(encoded_point_cloud)
     
     fused_rep = torch.cat((encoded_sequence, encoded_graph, encoded_point_cloud), dim=0)
     if fused_rep.size(0) == 1920:
         with torch.no_grad():
-            multimodal_representation = CAE.encode(fused_rep).squeeze().to("cpu")
+            multimodal_representation = CAE.encode(fused_rep).squeeze()#.to("cpu")
     else: 
         return None, None, None, None
 
@@ -331,29 +336,44 @@ def z_score_standardization(tensor):
 
 def process_encoded_graph(encoded_graph, edge_index, fixed_size=640, feature_dim=10):
     num_nodes = encoded_graph.size(0)
-
     if num_nodes > fixed_size:
-        ratio = fixed_size / num_nodes
-        with torch.no_grad():
-            pooling_layer = TopKPooling(in_channels=feature_dim, ratio=ratio)
-            pooled_x, edge_index, edge_attr, batch, perm, score = pooling_layer(
-                encoded_graph, edge_index
-            )
-        processed_encoded_graph = pooled_x
-    else:
+        # Randomly sample nodes to downsample
+        indices = torch.randperm(num_nodes)[:fixed_size]
+        processed_encoded_graph = encoded_graph[indices]
+    elif num_nodes < fixed_size:
+        # Pad with zeros if not enough nodes
         padding_size = fixed_size - num_nodes
-        zero_padding = torch.zeros(padding_size, feature_dim)
+        zero_padding = torch.zeros(padding_size, feature_dim, device=encoded_graph.device)
         processed_encoded_graph = torch.cat((encoded_graph, zero_padding), dim=0)
+    else:
+        processed_encoded_graph = encoded_graph
+    return processed_encoded_graph
+    # if num_nodes > fixed_size:
+    #     ratio = fixed_size / num_nodes
+    #     with torch.no_grad():
+    #         pooling_layer = TopKPooling(in_channels=feature_dim, ratio=ratio)
+    #         pooled_x, edge_index, edge_attr, batch, perm, score = pooling_layer(
+    #             encoded_graph, edge_index
+    #         )
+    #     processed_encoded_graph = pooled_x
+    # else:
+    #     padding_size = fixed_size - num_nodes
+    #     zero_padding = torch.zeros(padding_size, feature_dim)
+    #     processed_encoded_graph = torch.cat((encoded_graph, zero_padding), dim=0)
 
-    return processed_encoded_graph[:fixed_size]
+    #return processed_encoded_graph[:fixed_size]
 
 # Standard amino acid mapping
 amino_acid_mapping = {
         'A': 0, 'C': 1, 'D': 2, 'E': 3, 'F': 4,
         'G': 5, 'H': 6, 'I': 7, 'K': 8, 'L': 9,
         'M': 10, 'N': 11, 'P': 12, 'Q': 13, 'R': 14,
-        'S': 15, 'T': 16, 'V': 17, 'W': 18, 'Y': 19
+        'S': 15, 'T': 16, 'V': 17, 'W': 18, 'Y': 19, 'X': 20
     }
+amino_acids = 'ACDEFGHIKLMNPQRSTVWYX'
+label_encoder = LabelEncoder()
+label_encoder.fit(list(amino_acids))
+num_amino_acids = len(amino_acids)
 
 def read_hdf5(hdf5_path):
     hdf5_file = h5py.File(hdf5_path, "r")
@@ -361,7 +381,7 @@ def read_hdf5(hdf5_path):
     amino_acid_indices = hdf5_file["amino_types"][:]
     amino_acid_indices[amino_acid_indices > 20] = 20
     amino_acid_indices[amino_acid_indices == -1] = 20
-    label_encoder, amino_acids = get_aa_label_encoder("hdf5")
+    # label_encoder, amino_acids = get_aa_label_encoder("hdf5")
     try:
         sequence = "".join(label_encoder.inverse_transform(amino_acid_indices))
     except ValueError as e:
@@ -378,7 +398,7 @@ def read_hdf5(hdf5_path):
     coordinates = np.array(amino_pos, dtype=np.float32).squeeze()
     node_features = one_hot_encode_amino_acid(sequence, "hdf5")
     x = torch.tensor(node_features, dtype=torch.float32)
-    edge_index = radius_neighbors_graph(coordinates, radius=6.0, mode='connectivity', include_self='auto')
+    edge_index = kneighbors_graph(coordinates, 5, mode='connectivity', include_self=False)
     edge_index = edge_index.nonzero()
     edge_index = np.array(edge_index)
     edge_index = torch.from_numpy(edge_index).to(torch.long).contiguous()
