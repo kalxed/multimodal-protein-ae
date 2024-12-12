@@ -216,7 +216,7 @@ def main():
         train(train_loader=train_loader, val_loader=val_loader, criterion=criterion, device=device, num_epochs=num_epochs, model_path=model_path, use_attention=use_attention)
 
     if args.mode == "test":
-        test(test_loader=test_loader, model_path=model_path, criterion=criterion, device=device)
+        test(test_loader=test_loader, model_path=model_path, criterion=criterion, device=device, use_attention=use_attention)
 
     if args.mode == "all":
         fuse_proteins(device=device, vgae_model_path=vgae_path, pae_model_path=pae_path, data_dir=data_dir, protein_ids=protein_ids)
