@@ -8,7 +8,7 @@ echo "Slurm job id: $SLURM_JOB_ID"
 
 source ~/miniconda3/bin/activate dlprotproj
 
-python scripts/py/fusion_cae.py --mode train --pae-path models/PAE-200.pt --id-file fused-proteins --model-path models/CAE-ATTENTION.pt
+python scripts/py/fusion_cae.py --mode train --pae-path models/PAE-200.pt --id-file fused-proteins --model-path models/CAE-attention-concrete.pt --attention True
 
 echo "Done training"
 
