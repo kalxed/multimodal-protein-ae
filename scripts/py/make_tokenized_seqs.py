@@ -1,9 +1,12 @@
+import glob
 import os
 import os.path as osp
+
 import torch
-import glob
 from Bio.PDB import MMCIFParser
+
 from mpae.utils import structure_file_to_sequence, tokenize_sequence
+
 # Data paths, change these to your own paths
 structure_dir = osp.join("data", "raw-structures", "")
 

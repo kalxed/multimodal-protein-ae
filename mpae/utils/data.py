@@ -3,7 +3,6 @@ import os.path as osp
 
 import torch
 from torch.utils.data import Dataset
-from typing import Union
 
 
 class SingleModeDataset(Dataset):

@@ -8,7 +8,7 @@ import torch_geometric
 from torch.utils.data import random_split
 from torch_geometric.data import DataLoader
 from torch_geometric.loader import DataLoader
-from mpae.nn.vgae import *
+from mpae.nn.vgcn import *
 from mpae.utils.data import SingleModeDataset
 
 from torch_geometric.data.data import DataEdgeAttr, DataTensorAttr

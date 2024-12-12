@@ -11,10 +11,8 @@ from torch_geometric.data import Data
 from torch_geometric.nn import VGAE
 from torch_geometric.utils import negative_sampling
 
-from mpae.nn.attention import AttentionFusion
 from mpae.nn import esm
 from mpae.nn.pae import PointAutoencoder
-from torch_geometric.nn import TopKPooling
 
 
 def tokenize_sequence(seq: str, padding=True) -> torch.Tensor:

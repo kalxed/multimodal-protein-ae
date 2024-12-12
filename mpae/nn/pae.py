@@ -1,10 +1,11 @@
+import numpy as np
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 import torch.nn.parallel
 import torch.utils.data
 from torch.autograd import Variable
-import numpy as np
-import torch.nn.functional as F
+
 
 class ChamferDistance(nn.Module):
 
