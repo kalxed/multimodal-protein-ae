@@ -87,8 +87,19 @@ def load_models():
     shared_dim = 640  # Shared dimension after fusion
     latent_dim = 64  # Latent space size
     temperature = .5  # Concrete distribution temperature
-    concrete_model_path = "./models/CAE-attention-no-concrete.pt"
-    concrete_model = AttentiveCementAutoEncoder(input_dim, latent_dim, shared_dim, temperature).to(device)
+
+    # concrete_model_path = "./models/CAE-attention-no-concrete.pt"
+    # concrete_model = AttentiveCementAutoEncoder(input_dim, latent_dim, shared_dim).to(device)
+
+    # concrete_model_path = "./models/CAE-no-attention-no-concrete.pt"
+    # concrete_model = CementAutoEncoder(input_dim, latent_dim, shared_dim, temperature).to(device)
+
+    concrete_model_path = "./models/CAE-attention-concrete.pt"
+    concrete_model = AttentiveConcreteAutoEncoder(input_dim, latent_dim, shared_dim).to(device)
+
+    # concrete_model_path = "./models/CAE-no-attention-concrete.pt"
+    # concrete_model = ConcreteAutoEncoder(input_dim, latent_dim, shared_dim, temperature).to(device)
+
     state_dict = torch.load(concrete_model_path, map_location=device)
     if isinstance(state_dict, collections.OrderedDict):
         concrete_model.load_state_dict(state_dict)
