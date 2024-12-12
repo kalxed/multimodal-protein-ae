@@ -2,7 +2,7 @@
 #SBATCH -J CAE-FUSION-TEST
 #SBATCH -n 1
 #SBATCH --gpus-per-task=1
-#SBATCH -o logs/test-attention-fusion.out
+#SBATCH -o logs/test-cae-attention-concrete.out
 
 echo "Slurm job id: $SLURM_JOB_ID"
 
