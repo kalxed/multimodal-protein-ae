@@ -42,7 +42,7 @@ sys.path.append(".")
 
 from model.Concrete_Autoencoder import *
 from model.ESM import *
-from model.vgae import *
+from model.VGAE import *
 from model.PAE import *
 from model.Attention import *
 
@@ -54,9 +54,9 @@ def load_models():
     # Ititialize VGAE model
     out_channels = 10
     num_features = 20
-    vgae_model_path = "./data/models/VGAE.pt"
-    vgae_model = torch.load(vgae_model_path, map_location=device)
-    #vgae_model = VGAE(VariationalGCNEncoder(num_features, out_channels))
+    vgae_model_path = "./models/VGAE.pt"
+    vgae_model = VGAE(VariationalGCNEncoder(num_features, out_channels))
+    vgae_model.load_state_dict(torch.load(vgae_model_path, map_location=device))
     
     #state_dict = torch.load(vgae_model_path, map_location=device)
     #if isinstance(state_dict, collections.OrderedDict):
@@ -68,7 +68,7 @@ def load_models():
     # Load PAE model
     k = 640
     num_points = 2048
-    pae_model_path = "./data/models/PAE.pt"
+    pae_model_path = "./models/PAE.pt"
     pae_model = PointAutoencoder(k, num_points)
     
     state_dict = torch.load(pae_model_path, map_location=device)
@@ -88,7 +88,7 @@ def load_models():
     shared_dim = 640  # Shared dimension after fusion
     latent_dim = 64  # Latent space size
     temperature = .5  # Concrete distribution temperature
-    concrete_model_path = "./data/models/CAE-ATTENTION.pt"
+    concrete_model_path = "./models/CAE-attention-no-concrete.pt"
     concrete_model = ConcreteAutoencoder(input_dim, latent_dim, shared_dim, temperature).to(device)
     state_dict = torch.load(concrete_model_path, map_location=device)
     if isinstance(state_dict, collections.OrderedDict):
@@ -189,7 +189,7 @@ def get_aa_label_encoder(file_type):
     label_encoder = LabelEncoder()
     label_encoder.fit(list(amino_acids))
     return label_encoder, amino_acids
-amino_acids = 'ACDEFGHIKLMNPQRSTVWYX'
+amino_acids = 'ACDEFGHIKLMNPQRSTVWY'
 label_encoder = LabelEncoder()
 label_encoder.fit(list(amino_acids))
 num_amino_acids = len(amino_acids)
@@ -233,7 +233,7 @@ def read_pdb(pdb_path):
     coordinates = np.array(coordinates, dtype=np.float32)
     node_features = one_hot_encode_amino_acid(sequence, "pdb")
     x = torch.tensor(node_features, dtype=torch.float32)
-    edge_index = kneighbors_graph(coordinates, radius, mode='connectivity', include_self='auto')
+    edge_index = radius_neighbors_graph(coordinates, radius, mode='connectivity', include_self='auto')
     edge_index = edge_index.nonzero()
     edge_index = np.array(edge_index)
     edge_index = torch.from_numpy(edge_index).to(torch.long).contiguous()
@@ -306,7 +306,7 @@ def get_modalities(protein_path, ESM, VGAE, PAE, CAE, device):
     point_cloud = point_cloud.to(device)
     # Pass the point cloud data through PAE for encoding
     with torch.no_grad():
-        encoded_point_cloud = PAE.encode(point_cloud[None, :]).squeeze()#.to("cpu")
+        encoded_point_cloud = PAE.encode(point_cloud.unsqueeze(0)).squeeze()#.to("cpu")
         encoded_point_cloud = z_score_standardization(encoded_point_cloud)
     
     fused_rep = torch.cat((encoded_sequence, encoded_graph, encoded_point_cloud), dim=0)
@@ -363,9 +363,9 @@ amino_acid_mapping = {
         'A': 0, 'C': 1, 'D': 2, 'E': 3, 'F': 4,
         'G': 5, 'H': 6, 'I': 7, 'K': 8, 'L': 9,
         'M': 10, 'N': 11, 'P': 12, 'Q': 13, 'R': 14,
-        'S': 15, 'T': 16, 'V': 17, 'W': 18, 'Y': 19, 'X': 20
+        'S': 15, 'T': 16, 'V': 17, 'W': 18, 'Y': 19
     }
-amino_acids = 'ACDEFGHIKLMNPQRSTVWYX'
+amino_acids = 'ACDEFGHIKLMNPQRSTVWY'
 label_encoder = LabelEncoder()
 label_encoder.fit(list(amino_acids))
 num_amino_acids = len(amino_acids)
@@ -393,7 +393,7 @@ def read_hdf5(hdf5_path):
     coordinates = np.array(amino_pos, dtype=np.float32).squeeze()
     node_features = one_hot_encode_amino_acid(sequence, "hdf5")
     x = torch.tensor(node_features, dtype=torch.float32)
-    edge_index = kneighbors_graph(coordinates, 5, mode='connectivity', include_self=False)
+    edge_index = radius_neighbors_graph(coordinates, 6.0, mode='connectivity', include_self=False)
     edge_index = edge_index.nonzero()
     edge_index = np.array(edge_index)
     edge_index = torch.from_numpy(edge_index).to(torch.long).contiguous()
