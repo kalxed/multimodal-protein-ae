@@ -8,11 +8,12 @@ import torch_geometric
 from torch_geometric.loader import DataLoader
 from torch_geometric.nn import VGAE
 
-from mpae.nn import ConcreteAutoencoder, VariationalGCNEncoder
+import mpae
+from mpae.nn import cae, vgcn
 from mpae.nn.pae import PointAutoencoder
 from mpae.utils import fuse_modalities
 from mpae.utils.data import SingleModeDataset
-import mpae
+
 # Concrete autoencoder parameters
 input_dim = 640 * 3  # Input dimension after fusion
 shared_dim = 640  # Shared dimension after fusion
@@ -24,6 +25,21 @@ torch.serialization.add_safe_globals([torch_geometric.data.data.DataEdgeAttr,
                                       torch_geometric.data.data.DataTensorAttr,
                                       torch_geometric.data.storage.GlobalStorage])
 
+def get_model(concrete, attention, path=None) -> nn.Module: 
+    kwargs = {"input_dim": input_dim, "latent_dim":latent_dim, "hidden_dim": shared_dim}
+    if concrete:
+        kwargs['temperature'] = temperature
+        if attention:
+            model = cae.AttentiveConcreteAutoEncoder(**kwargs)
+        else:
+            model = cae.ConcreteAutoencoder(**kwargs)
+    elif attention:
+        model = cae.AttentiveCementAutoEncoder(**kwargs)
+    else:
+        model = cae.CementAutoEncoder(**kwargs)
+    if path:
+        model.load_state_dict(torch.load(path, weights_only=True))
+    return model
 
 def fuse_proteins(device: torch.device, vgae_model_path: str, pae_model_path:str, data_dir: str, protein_ids: list[str], out_dir:str="fusion"):
     """perform attention-based fusion
@@ -31,7 +47,7 @@ def fuse_proteins(device: torch.device, vgae_model_path: str, pae_model_path:str
     For each protein, fuse the graph, point cloud, and sequence into a single representation
     """
 
-    vgae_model = VGAE(VariationalGCNEncoder(20, 10)).to(device)
+    vgae_model = VGAE(vgcn.VariationalGCNEncoder(20, 10)).to(device)
     vgae_model.load_state_dict(torch.load(vgae_model_path, map_location=device, weights_only=True))
     pae_model = PointAutoencoder(640, 2048).to(device)
     pae_model.load_state_dict(torch.load(pae_model_path, map_location=device, weights_only=True))
@@ -111,13 +127,11 @@ def validate(model, val_loader, criterion, device):
     return average_loss
 
 @torch.no_grad
-def test(test_loader: torch.utils.data.DataLoader, model_path, criterion, device, use_attention):
+def test(test_loader: torch.utils.data.DataLoader, model_path, criterion, device, use_attention, use_concrete):
     if len(test_loader) == 0:
         average_loss = torch.nan
     else:
-        model = ConcreteAutoencoder(input_dim=input_dim, hidden_dim=shared_dim, latent_dim=latent_dim, temperature=temperature, attention=use_attention).to(device)
-        model.load_state_dict(torch.load(model_path, weights_only=True))
-        model.to(device)
+        model = get_model(concrete=use_concrete, attention=use_attention, path=model_path).to(device)
         model.eval()
         total_loss = 0.0
         with torch.no_grad():
@@ -131,9 +145,8 @@ def test(test_loader: torch.utils.data.DataLoader, model_path, criterion, device
 
     print(f"Test Loss: {average_loss:.4f}")
 
-def train(train_loader, val_loader, criterion, device, num_epochs, model_path, use_attention):
-    model = ConcreteAutoencoder(input_dim=input_dim, hidden_dim=shared_dim, latent_dim=latent_dim, temperature=temperature, attention=use_attention).to(device)
-    new_temp = temperature
+def train(train_loader, val_loader, criterion, device, num_epochs, model_path, use_attention, use_concrete):
+    model = get_model(concrete=use_concrete, attention=use_attention).to(device)
     # Define optimizer (Adam)
     optimizer = torch.optim.Adam(model.parameters(), lr=0.0001, weight_decay=1e-5)
     # Training loop
@@ -153,13 +166,13 @@ def train(train_loader, val_loader, criterion, device, num_epochs, model_path, u
             loss.backward()
             total_loss += loss.item()
             optimizer.step()
-
-        model.update_temp(new_temp = temperature * ((final_temperature / temperature) ** (epoch / (num_epochs+1))))
+        if use_concrete:
+            model.update_temp(new_temp = temperature * ((final_temperature / temperature) ** (epoch / (num_epochs+1))))
 
         if epoch % 5 == 0:
             train_loss = total_loss / len(train_loader)
             val_loss = validate(model, val_loader, criterion, device)
-            print(f"Epoch {epoch}/{num_epochs}, Train Loss: {train_loss:.4f}, Val Loss: {val_loss}")
+            print(f"Epoch {epoch}/{num_epochs}, Train Loss: {train_loss:.4f}, Val Loss: {val_loss:.4f}")
 
     # Save the trained model
     torch.save(model.state_dict(), model_path)
@@ -181,7 +194,11 @@ def main():
     parser.add_argument("--epochs", default=100, help="number of epochs to train for. only applicable when mode=train", type=int)
     parser.add_argument("--batch-size", default=64, help="batch size for training", type=int, dest="batch_size")
     parser.add_argument("--data-out-dir", default="fusion",type=str, dest="data_out")
-    parser.add_argument("--attention", default=True, type=bool, help="whether to use attention", dest="attention")
+    parser.add_argument("--attention", action=argparse.BooleanOptionalAction, help="whether to use attention", dest="attention")
+    concrete_cement = parser.add_mutually_exclusive_group()
+    concrete_cement.add_argument("--concrete", action='store_true', help="whether to use conrete auto-encoder", dest="concrete")
+    concrete_cement.add_argument("--cement", action='store_false', dest="concrete")
+    parser.set_defaults(concrete=True)
 
     args = parser.parse_args()
     model_path = args.model_path
@@ -194,6 +211,7 @@ def main():
     batch_size = args.batch_size
     data_out = args.data_out
     use_attention = args.attention
+    use_concrete = args.concrete
 
     with open(id_file, 'r') as f:
         protein_ids = [pid.strip() for pid in f.readlines()]
@@ -218,15 +236,15 @@ def main():
         criterion = nn.MSELoss()
 
     if args.mode == "train":
-        train(train_loader=train_loader, val_loader=val_loader, criterion=criterion, device=device, num_epochs=num_epochs, model_path=model_path, use_attention=use_attention)
+        train(train_loader=train_loader, val_loader=val_loader, criterion=criterion, device=device, num_epochs=num_epochs, model_path=model_path, use_attention=use_attention, use_concrete=use_concrete)
 
     if args.mode == "test":
-        test(test_loader=test_loader, model_path=model_path, criterion=criterion, device=device, use_attention=use_attention)
+        test(test_loader=test_loader, model_path=model_path, criterion=criterion, device=device, use_attention=use_attention, use_concrete=use_concrete)
 
     if args.mode == "all":
         fuse_proteins(device=device, vgae_model_path=vgae_path, pae_model_path=pae_path, data_dir=data_dir, protein_ids=protein_ids)
-        train(train_loader=train_loader, val_loader=val_loader, criterion=criterion, device=device, num_epochs=num_epochs, model_path=model_path, use_attention=use_attention)
-        test(test_loader=test_loader, model_path=model_path, criterion=criterion, device=device, use_attention=use_attention)
+        train(train_loader=train_loader, val_loader=val_loader, criterion=criterion, device=device, num_epochs=num_epochs, model_path=model_path, use_attention=use_attention, use_concrete=use_concrete)
+        test(test_loader=test_loader, model_path=model_path, criterion=criterion, device=device, use_attention=use_attention, use_concrete=use_concrete)
 
 
 if __name__ == "__main__":
