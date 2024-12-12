@@ -25,7 +25,7 @@ torch.serialization.add_safe_globals([torch_geometric.data.data.DataEdgeAttr,
                                       torch_geometric.data.data.DataTensorAttr,
                                       torch_geometric.data.storage.GlobalStorage])
 
-def get_model(concrete, attention, path=None) -> nn.Module: 
+def get_model(concrete, attention, path=None, device=torch.device("cpu")) -> nn.Module: 
     kwargs = {"input_dim": input_dim, "latent_dim":latent_dim, "hidden_dim": shared_dim}
     if concrete:
         kwargs['temperature'] = temperature
@@ -38,7 +38,7 @@ def get_model(concrete, attention, path=None) -> nn.Module:
     else:
         model = cae.CementAutoEncoder(**kwargs)
     if path:
-        model.load_state_dict(torch.load(path, weights_only=True))
+        model.load_state_dict(torch.load(path, weights_only=True, map_location=device))
     return model
 
 def fuse_proteins(device: torch.device, vgae_model_path: str, pae_model_path:str, data_dir: str, protein_ids: list[str], out_dir:str="fusion"):
@@ -131,7 +131,7 @@ def test(test_loader: torch.utils.data.DataLoader, model_path, criterion, device
     if len(test_loader) == 0:
         average_loss = torch.nan
     else:
-        model = get_model(concrete=use_concrete, attention=use_attention, path=model_path).to(device)
+        model = get_model(concrete=use_concrete, attention=use_attention, path=model_path, device=device)
         model.eval()
         total_loss = 0.0
         with torch.no_grad():
@@ -199,8 +199,9 @@ def main():
     concrete_cement.add_argument("--concrete", action='store_true', help="whether to use conrete auto-encoder", dest="concrete")
     concrete_cement.add_argument("--cement", action='store_false', dest="concrete")
     parser.set_defaults(concrete=True)
-
+    print("set up args")
     args = parser.parse_args()
+    print("parsed args")
     model_path = args.model_path
     vgae_path = args.vgae_path
     pae_path = args.pae_path
