@@ -86,8 +86,8 @@ class ConcreteAutoencoder(nn.Module):
 
 class AttentiveConcreteAutoEncoder(ConcreteAutoencoder):
     def __init__(self, input_dim, latent_dim, hidden_dim=640, temperature=1, dropout_rate=0.1):
-        self.attention = nn.MultiheadAttention(embed_dim=input_dim, num_heads=4)
         super().__init__(input_dim=input_dim, latent_dim=latent_dim, hidden_dim=hidden_dim, temperature=temperature, dropout_rate=dropout_rate)
+        self.attention = nn.MultiheadAttention(embed_dim=input_dim, num_heads=4)
 
     def encode(self, fused_rep):
         attentive_rep = self.attention(fused_rep, fused_rep, fused_rep)
@@ -147,8 +147,8 @@ class CementAutoEncoder(nn.Module):
 
 class AttentiveCementAutoEncoder(CementAutoEncoder):
     def __init__(self, input_dim, latent_dim, hidden_dim=640, dropout_rate=0.1):
-        self.attention = nn.MultiheadAttention(embed_dim=input_dim, num_heads=4)
         super().__init__(input_dim, latent_dim, hidden_dim, dropout_rate)
+        self.attention = nn.MultiheadAttention(embed_dim=input_dim, num_heads=4)
     def encode(self, fused_rep):
         attentive_rep = self.attention(fused_rep, fused_rep, fused_rep)
         return super().encode()
