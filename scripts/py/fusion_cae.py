@@ -17,8 +17,8 @@ import mpae
 input_dim = 640 * 3  # Input dimension after fusion
 shared_dim = 640  # Shared dimension after fusion
 latent_dim = 64  # Latent space size
-temperature = .5  # Concrete distribution temperature
-final_temperature = 0.125
+temperature = 10.0  # Concrete distribution temperature
+final_temperature = 0.01
 
 torch.serialization.add_safe_globals([torch_geometric.data.data.DataEdgeAttr, 
                                       torch_geometric.data.data.DataTensorAttr,
