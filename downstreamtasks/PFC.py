@@ -77,12 +77,12 @@ def setup(modal, mode, test_dataset):
     # Load feature data and labels for each label file
     for file in label_file_name:
         # Load labels from the text file
-        with open(f'{data_folder}/{file}.txt', 'r') as f:
+        with open(f'{data_folder}/clean-{file}.txt', 'r') as f:
             lines = f.readlines()
             y[file] = [line.split()[-1] for line in lines]
 
         # Load feature data from the selected modality
-        with open(f'{data_folder}{file}/{modal}.pkl', 'rb') as f:
+        with open(f'{data_folder}/{file}/{modal}.pkl', 'rb') as f:
             X[file] = pickle.load(f)
 
     # Split data into train, validation, and test sets
@@ -121,8 +121,8 @@ def train(modal, batches):
     modal, X_train, y_train, X_validation, y_validation = setup(modal, 'train', None)
     
     # Train a multi-class classification model using XGBoost
-    xgb_model = XGBClassifier(learning_rate=0.1, n_estimators=1000, max_depth=5, random_state=42, tree_method='gpu_hist', objective='multi:softmax')
-    xgb_model.fit(X_train, y_train, eval_metric='mlogloss', eval_set=[(X_train, y_train), (X_validation, y_validation)], early_stopping_rounds=10, verbose=1)
+    xgb_model = XGBClassifier(learning_rate=0.1, n_estimators=1000, max_depth=5, random_state=42, tree_method='hist', objective='multi:softmax', early_stopping_rounds=10, eval_metric='mlogloss')
+    xgb_model.fit(X_train, y_train, eval_set=[(X_train, y_train), (X_validation, y_validation)])
     
     # Save the trained model
     xgb_model.save_model(f"{data_folder}/{modal}_model.json")
@@ -138,3 +138,39 @@ def test(test_dataset, modal, batches):
     # Make predictions and calculate accuracy for each test set
     y_pred = xgb_model.predict(X_test)
     print(f"Accuracy :", accuracy_score(y_test, y_pred))
+    
+    
+# def filter_and_track_removed_lines(txt_file, directory, output_file, removed_lines_file):
+#     # Read the lines from the input text file
+#     with open(txt_file, 'r') as file:
+#         lines = file.readlines()
+    
+#     valid_lines = []  # To store lines that match existing files
+#     removed_lines = []  # To store first portions of lines that are removed
+
+#     for line in lines:
+#         first_portion = line.split('\t')[0].strip()  # Extract first portion
+#         file_name_with_extension = f"{first_portion}.hdf5"  # Add the .hdf5 extension
+#         file_path = os.path.join(directory, file_name_with_extension)
+#         if os.path.isfile(file_path):
+#             valid_lines.append(line)
+#         else:
+#             removed_lines.append(first_portion)
+    
+#     # Write the valid lines to the output file
+#     with open(output_file, 'w') as file:
+#         file.writelines(valid_lines)
+
+#     # Write the removed first portions to a separate file
+#     with open(removed_lines_file, 'w') as file:
+#         file.writelines(f"{line}\n" for line in removed_lines)
+
+#     print(f"Filtered lines saved to: {output_file}")
+#     print(f"Removed lines saved to: {removed_lines_file}")
+
+# data_folder = './data/SCOPe1.75'
+# label_file_name = ['training', 'validation', 'test_family', 'test_fold', 'test_superfamily']
+
+# # Load feature data and labels for each label file
+# for file in label_file_name:
+#     filter_and_track_removed_lines(f'{data_folder}/{file}.txt', f'{data_folder}/{file}', f'{data_folder}/clean-{file}.txt', f'{data_folder}/removed.txt')

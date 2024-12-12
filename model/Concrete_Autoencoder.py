@@ -38,15 +38,11 @@ class ConcreteAutoencoder(nn.Module):
         )
         
          # Add attention mechanism to the encoder (self-attention)
-        # self.use_attention = attention
-       
-        ## Comment out if not using attention ##
-        ## embed_dim = latent_dim if attention after encoding ##
-        ## embed_dim = input_dim if attention before encoding ##
         if attention:
             self.attention = nn.MultiheadAttention(embed_dim=input_dim, num_heads=4)
-        # else:    
-        # self.attention = nn.Identity() if not attention else self.attention
+            self.use_attention = True
+        else:
+            self.use_attention = False
 
         # Decoder: Mapping latent space back to original input space
         self.decoder = nn.Sequential(
@@ -73,7 +69,7 @@ class ConcreteAutoencoder(nn.Module):
         """
         Encodes the input into the latent space.
         """
-        if self.attention:  
+        if self.use_attention:  
             h, _ = self.attention(fused_rep, fused_rep, fused_rep)
         else:
             h = fused_rep
@@ -83,31 +79,20 @@ class ConcreteAutoencoder(nn.Module):
         """
         fused_rep: The representation coming from the attention fusion of multiple modalities
         """
-        ## Attention before encoding ##
-        # attention_rep, attention_weights = self.attention(fused_rep, fused_rep, fused_rep)
         
-        encoded = self.encode(fused_rep)
+        # encoded = self.encode(fused_rep)
         
-        concrete_rep = self.concrete(encoded)
-        
-        reconstructed = self.decoder(concrete_rep)
-        
-        return reconstructed
-    
-        ## Attention after encoding ##
-        # encoded = self.encoder(fused_rep)
-        
-        # attention_rep, attention_weights = self.attention(encoded, encoded, encoded)
-        
-        # concrete_rep = self.concrete(attention_rep)
+        # concrete_rep = self.concrete(encoded)
         
         # reconstructed = self.decoder(concrete_rep)
         
         # return reconstructed
-        
-        ## No attention mechanism ##
-        # encoded = self.encoder(fused_rep)
-        
-        # concrete_rep = self.concrete(encoded)
-        
-        # return self.decoder(concrete_rep)
+    
+        # Cemet style
+        # Encoder produces logits
+        encoded = self.encode(fused_rep)
+ 
+        # Decoder reconstructs input from the latent representation
+        reconstructed = self.decoder(encoded)
+
+        return reconstructed

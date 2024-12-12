@@ -83,17 +83,22 @@ def load_data(modal, data_folder, batches, attention):
     if attention:
         modal = f"attention-{modal}"
     
+    try:
+        with open(f'{data_folder}/{modal}-AE.pkl', 'rb') as f:
+            tensor_list = pickle.load(f)
+             # Check if elements are NumPy arrays, no need to call detach() for NumPy arrays
+            if isinstance(tensor_list[0], np.ndarray):
+                data = tensor_list
+            else:
+                data = [tensor.detach().numpy() for tensor in tensor_list]  # In case they are PyTorch tensors
+    except:
+        print(f"Representation for {modal} not found. Please process the data first.")
+        sys.exit(1)
     # Load input data (X) from a pickle file and labels (y) from a CSV file
-    with open(f'{data_folder}/{modal}.pkl', 'rb') as f:
-        tensor_list = pickle.load(f)
+    # with open(f'{data_folder}/{modal}.pkl', 'rb') as f:
+    #     tensor_list = pickle.load(f)
         
-        # Check if elements are NumPy arrays, no need to call detach() for NumPy arrays
-        if isinstance(tensor_list[0], np.ndarray):
-            data = tensor_list
-        else:
-            data = [tensor.detach().numpy() for tensor in tensor_list]  # In case they are PyTorch tensors
-        
-        X = np.array(data)
+    X = np.array(data)
 
     df = pd.read_csv(f'{data_folder}/label.csv')
     df = df[df['id'] != '1AA6'] # Remove the row with the non-standard amino acid
@@ -108,6 +113,9 @@ def train(modal, batches, attention):
     X, y, fold_ids = load_data(modal, data_folder, batches, attention)
     cv = GroupKFold(n_splits=10)
     
+    if attention:
+        modal = f"attention-{modal}"
+    
     fold_results = []
 
     for i, (train_index, test_index) in enumerate(cv.split(X, y, groups=fold_ids)):
@@ -116,13 +124,13 @@ def train(modal, batches, attention):
         y_train, y_test = y.iloc[train_index], y.iloc[test_index]
 
         # Initialize and train the XGBoost classifier
-        model = XGBClassifier(learning_rate=0.05, n_estimators=1000, max_depth=5, random_state=42, tree_method='hist', objective="binary:logistic", eval_metric='logloss', early_stopping_rounds=10)
+        model = XGBClassifier(learning_rate=0.1, n_estimators=1000, max_depth=5, random_state=42, tree_method='hist', objective="binary:logistic", eval_metric='logloss', early_stopping_rounds=10, verbose=0)
         model.fit(X_train, y_train, eval_set=[(X_train, y_train), (X_test, y_test)])
 
-        if not os.path.exists(f'{data_folder}/{modal}_model/'):
-            os.makedirs(f'{data_folder}/{modal}_model/')
+        if not os.path.exists(f'{data_folder}/{modal}-AE_model/'):
+            os.makedirs(f'{data_folder}/{modal}-AE_model/')
         # Save the trained model for each fold
-        model.save_model(f"{data_folder}/{modal}_model/fold{i+1}.json")
+        model.save_model(f"{data_folder}/{modal}-AE_model/fold{i+1}.json")
         
         score = model.score(X_test, y_test)  # Replace with appropriate metric
         fold_results.append({'fold': i + 1, 'score': score})
@@ -135,13 +143,16 @@ def test(modal, attention):
     batches = False
     X, y, fold_ids = load_data(modal, data_folder, batches, attention)
     cv = GroupKFold(n_splits=10)
+    
+    if attention:
+        modal = f"attention-{modal}"
 
     fold_scores = []
     for i, (train_index, test_index) in enumerate(cv.split(X, y, groups=fold_ids)):
         # Load the trained model for each fold
         X_test, y_test = X[test_index], y.iloc[test_index]
         model = XGBClassifier()
-        model.load_model(f"{data_folder}/{modal}_model/fold{i+1}.json")
+        model.load_model(f"{data_folder}/{modal}-AE_model/fold{i+1}.json")
 
         # Make predictions and calculate accuracy for each fold
         y_pred = model.predict(X_test)

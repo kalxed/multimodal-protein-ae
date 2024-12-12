@@ -28,7 +28,7 @@ class MultimodalDataset(Dataset):
 # Load the preprocessed data
 
 # Uncomment to load the point cloud data from all .pt files
-files = glob.glob('./data/multimodal/*.pt')
+files = glob.glob('./data/test-multimodal/*.pt')
 dataset = []
 
 for file in files:
@@ -70,16 +70,17 @@ valid_loader = DataLoader(valid_dataset, batch_size=batch_size, shuffle=False)
 test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
 
 # Initialize the model with the temperature parameter
-input_dim = 640  # Input dimension after fusion
+input_dim = 640 * 3 # Input dimension after fusion
 hidden_dim = 256  # Hidden layer size
 latent_dim = 64  # Latent space size
 temperature = .5  # Concrete distribution temperature
+final_temp = 0.1  # Final temperature
 
 model = ConcreteAutoencoder(input_dim, latent_dim, hidden_dim, temperature).to(device)
 
 # Define loss function (MSE) and optimizer (Adam)
 criterion = nn.MSELoss()
-optimizer = torch.optim.Adam(model.parameters(), lr=0.0001, weight_decay=1e-5)
+optimizer = torch.optim.Adam(model.parameters(), lr=0.001, weight_decay=1e-5)
 
 def train(model, train_data, optimizer, criterion, device):
     model.train()
@@ -90,8 +91,10 @@ def train(model, train_data, optimizer, criterion, device):
         optimizer.zero_grad()
 
         # Forward pass with fused modalities
-        reconstructed = model(data)
-        loss = criterion(reconstructed, data)
+        encoding = model.encode(data)
+        reconstructed = model.decoder(encoding)
+        # reconstructed = model(encoding)
+        loss = criterion(data, reconstructed)
 
         # Backpropagate the gradients
         loss.backward()
@@ -108,8 +111,10 @@ def eval(model, data, criterion, device):
     with torch.no_grad():
         for batch in data:
             batch = batch.to(device)
-            reconstructions = model(batch)
-            loss = criterion(reconstructions, batch)
+            encoding = model.encode(batch)
+            reconstructed = model.decoder(encoding)
+            # reconstructions = model(batch)
+            loss = criterion(reconstructed, batch)
             total_loss += loss.item()
             
     average_loss = total_loss / len(data)
@@ -126,8 +131,9 @@ def main():
     args = parser.parse_args()
 
     if args.mode == "train":
-        num_epochs = 20
+        num_epochs = 100
         for epoch in range(num_epochs):
+            model.temperature = temperature * (final_temp/temperature) ** (epoch / num_epochs)
             average_loss = train(model, train_loader, optimizer, criterion, device)
             print(f"Epoch {epoch+1}/{num_epochs}, Loss: {average_loss:.4f}")
 
@@ -136,11 +142,11 @@ def main():
             print(f"Validation Loss: {val_loss:.4f}")
 
         # Save trained model
-        torch.save(model, "./data/models/Concrete.pt")
-        # torch.save(model.state_dict(), "./data/models/Concrete.pt")
+        # torch.save(model, "./data/models/NewCAE.pt")
+        torch.save(model.state_dict(), "./data/models/NewCAE.pt")
 
     elif args.mode == "test":
-        model.load_state_dict(torch.load("./data/models/Concrete.pt", weights_only=True))
+        model.load_state_dict(torch.load("./data/models/NewCAE.pt", weights_only=False))
         test_loss = eval(model, test_loader, criterion, device)
         print(f"Test Loss: {test_loss:.4f}")
 

@@ -129,20 +129,29 @@ def pickle_dump(data_folder, mulmodal, sequence, graph, point_cloud, attention):
     with open(f'{data_folder}/point_cloud.pkl', 'wb') as f:
         pickle.dump(point_cloud, f)
         
-def pickle_batch_dump(batch_num, data_folder, mulmodal, sequence, graph, point_cloud):
+def pickle_batch_dump(batch_num, data_folder, mulmodal, sequence, graph, point_cloud, attention):
     # Create directories if they do not exist
-    if not os.path.exists(f'{data_folder}/multimodal'):
-        os.makedirs(f'{data_folder}/multimodal')
+    if not os.path.exists(f'{data_folder}/attention-multimodal-AE'):
+        os.makedirs(f'{data_folder}/attention-multimodal-AE')
+    if not os.path.exists(f'{data_folder}/multimodal-AE'):
+        os.makedirs(f'{data_folder}/multimodal-AE')
     if not os.path.exists(f'{data_folder}/sequences'):
         os.makedirs(f'{data_folder}/sequences')
     if not os.path.exists(f'{data_folder}/graphs'):
         os.makedirs(f'{data_folder}/graphs')
     if not os.path.exists(f'{data_folder}/pointclouds'):
         os.makedirs(f'{data_folder}/pointclouds')
+        
+    if attention:
+        with open(f'{data_folder}/attention-multimodal-AE/{batch_num}.pkl', 'wb') as f:
+            pickle.dump(mulmodal, f)
+    else: 
+        with open(f'{data_folder}/multimodal-AE/{batch_num}.pkl', 'wb') as f:
+            pickle.dump(mulmodal, f)
     
-    # Save the features to pickle files    
-    with open(f'{data_folder}/multimodal/{batch_num}.pkl', 'wb') as f:
-        pickle.dump(mulmodal, f)
+    # # Save the features to pickle files    
+    # with open(f'{data_folder}/multimodal/{batch_num}.pkl', 'wb') as f:
+    #     pickle.dump(mulmodal, f)
 
     with open(f'{data_folder}/sequences/{batch_num}.pkl', 'wb') as f:
         pickle.dump(sequence, f)

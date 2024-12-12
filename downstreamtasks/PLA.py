@@ -83,7 +83,7 @@ def process(dataset_name, batches, attention):
         if batches:
             if (i + 1) % batch_size == 0 or (i + 1) == len(df):
                 batch_counter += 1
-                pickle_batch_dump(batch_counter, data_folder, mulmodal, sequence, graph, point_cloud)
+                pickle_batch_dump(batch_counter, data_folder, mulmodal, sequence, graph, point_cloud, attention)
 
                 # Clear lists to free up memory
                 mulmodal.clear()
@@ -95,15 +95,18 @@ def process(dataset_name, batches, attention):
         pickle_dump(data_folder, mulmodal, sequence, graph, point_cloud)
     print("Features processed successfully.")
 
-def setup(dataset, modal, batches):
+def setup(dataset, modal, batches, attention):
     data_folder = f'./data/{dataset}'
+    
+    if attention:
+        modal = f"attention-{modal}"
 
     # Load feature data from the selected modality 
     if batches:
         if modal != "multimodal":
             modality_folder = os.path.join(data_folder, modal + "s")
         else:
-            modality_folder = os.path.join(data_folder, modal)
+            modality_folder = os.path.join(data_folder, modal + "-AE")
         num_batches = len([name for name in os.listdir(modality_folder) if name.endswith('.pkl') and os.path.isfile(os.path.join(modality_folder, name))])
         print(f'Number of batches: {num_batches}')
         X = load_batch_data(modality_folder, modal)
@@ -153,9 +156,12 @@ def setup(dataset, modal, batches):
 
 def train(dataset, modal, batches, attention):
     # Define optimizer and loss
-    model, X_train, y_train, X_test, y_test, likelihood, data_folder = setup(dataset, modal, batches)
+    model, X_train, y_train, X_test, y_test, likelihood, data_folder = setup(dataset, modal, batches, attention)
     optimizer = torch.optim.Adam(model.parameters(), lr=0.1)
     mll = gpytorch.mlls.ExactMarginalLogLikelihood(likelihood, model)
+    
+    if attention:
+        modal = f"attention-{modal}"
 
     # Train the model
     training_iter = 100
@@ -169,20 +175,25 @@ def train(dataset, modal, batches, attention):
         loss = -mll(output, y_train)
         loss.backward()
         optimizer.step()
-        print('Iter %d/%d - Loss: %.3f   lengthscale: %.3f   noise: %.3f' % (
-            i + 1, training_iter, loss.item(),
-            model.covar_module.base_kernel.lengthscale.item(),
-            model.likelihood.noise.item()
-        ))
+        if i % 10 == 0:
+            print('Iter %d/%d - Loss: %.3f   lengthscale: %.3f   noise: %.3f' % (
+                i + 1, training_iter, loss.item(),
+                model.covar_module.base_kernel.lengthscale.item(),
+                model.likelihood.noise.item()
+            ))
     
     # Save the trained model state
-    torch.save(model.state_dict(), f'{data_folder}/{modal}_model_state.pth')
+    torch.save(model.state_dict(), f'{data_folder}/{modal}-AE_model_state.pth')
 
-def test(dataset, modal,batches, attention):
-    model, X_train, y_train, X_test, y_test, likelihood, data_folder = setup(dataset, modal, batches)
+def test(dataset, modal, batches, attention):
+    model, X_train, y_train, X_test, y_test, likelihood, data_folder = setup(dataset, modal, batches, attention)
     # Load the trained model state
     data_folder = f'./data/{dataset}'
-    state_dict = torch.load(f'{data_folder}/{modal}_model_state.pth')
+    
+    if attention:
+        modal = f"attention-{modal}"
+    
+    state_dict = torch.load(f'{data_folder}/{modal}-AE_model_state.pth')
     model.load_state_dict(state_dict)
 
     # Evaluate the model on the test set

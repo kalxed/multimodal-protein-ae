@@ -42,11 +42,13 @@ def main():
             modality = input(f"Select the modality ({', '.join(modalities)}): ").strip().lower()
             if modality not in modalities:
                 print("Invalid modality. Please choose from the available options.")
-            atten = input(f"Choose to use attention (True/False): ").strip().lower()
-            if atten not in ["true", "false"]:
-                print("Invalid selection. Please choose 'True' or 'False'.")
-            else:
-                attention = atten == "true"
+                
+    if modality == "multimodal":
+        atten = input(f"Choose to use attention (True/False): ").strip().lower()
+        if atten not in ["true", "false"]:
+            print("Invalid selection. Please choose 'True' or 'False'.")
+        else:
+            attention = atten == "true"
     
     # Task-Specific Arguments
     if task == "PFC" and mode == "test":
@@ -69,6 +71,7 @@ def main():
     print(f"Mode: {mode}")
     if mode in ['train', 'test', 'train-test', 'all']:
         print(f"Modality: {modality}")
+    if modality == "multimodal":
         print(f"Attention: {attention}")
     if mode == "process":
         print(f"Batch Processing: {batches}")
@@ -130,3 +133,20 @@ def main():
 
 if __name__ == "__main__":
     main()
+    
+    # to process at night
+    # EI with cement AE w/ attention
+    # EI.process(False, True)
+    
+    # EI with cement AE w/o attention
+    # EI.process(False, False)
+    
+    # # PLA with cement AE w/ attention
+    # PLA.process('DAVIS', True, True)
+    # PLA.train('DAVIS', 'multimodal', True, True)
+    # PLA.test('DAVIS', 'multimodal', True, True)
+
+    # # PLA with cement AE w/o attention
+    # PLA.process('DAVIS', True, False)
+    # PLA.train('DAVIS', 'multimodal', True, False)
+    # PLA.test('DAVIS', 'multimodal', True, False)
