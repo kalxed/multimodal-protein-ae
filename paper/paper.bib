@@ -1,7 +1,181 @@
-@TechReport{mitchell80,
-  author = 	 "T. M. Mitchell",
-  title = 	 "The Need for Biases in Learning Generalizations",
-  institution =  "Computer Science Department, Rutgers University",
-  year = 	 "1980",
-  address =	 "New Brunswick, MA",
+@misc{abid_2019,
+  title     = {Concrete {Autoencoders} for {Differentiable} {Feature} {Selection} and {Reconstruction}},
+  url       = {http://arxiv.org/abs/1901.09346},
+  doi       = {10.48550/arXiv.1901.09346},
+  abstract  = {We introduce the concrete autoencoder, an end-to-end differentiable method for global feature selection, which efficiently identifies a subset of the most informative features and simultaneously learns a neural network to reconstruct the input data from the selected features. Our method is unsupervised, and is based on using a concrete selector layer as the encoder and using a standard neural network as the decoder. During the training phase, the temperature of the concrete selector layer is gradually decreased, which encourages a user-specified number of discrete features to be learned. During test time, the selected features can be used with the decoder network to reconstruct the remaining input features. We evaluate concrete autoencoders on a variety of datasets, where they significantly outperform state-of-the-art methods for feature selection and data reconstruction. In particular, on a large-scale gene expression dataset, the concrete autoencoder selects a small subset of genes whose expression levels can be use to impute the expression levels of the remaining genes. In doing so, it improves on the current widely-used expert-curated L1000 landmark genes, potentially reducing measurement costs by 20\%. The concrete autoencoder can be implemented by adding just a few lines of code to a standard autoencoder.},
+  urldate   = {2024-12-08},
+  publisher = {arXiv},
+  author    = {Abid, Abubakar and Balin, Muhammad Fatih and Zou, James},
+  month     = jan,
+  year      = {2019},
+  note      = {arXiv:1901.09346 [cs]},
+  keywords  = {Computer Science - Machine Learning, Statistics - Machine Learning}
+}
+
+
+
+@article{alphafold,
+  title     = {Highly accurate protein structure prediction with {AlphaFold}},
+  volume    = {596},
+  copyright = {2021 The Author(s)},
+  issn      = {1476-4687},
+  url       = {https://www.nature.com/articles/s41586-021-03819-2},
+  doi       = {10.1038/s41586-021-03819-2},
+  abstract  = {Proteins are essential to life, and understanding their structure can facilitate a mechanistic understanding of their function. Through an enormous experimental effort1-4, the structures of around 100,000 unique proteins have been determined5, but this represents a small fraction of the billions of known protein sequences6,7. Structural coverage is bottlenecked by the months to years of painstaking effort required to determine a single protein structure. Accurate computational approaches are needed to address this gap and to enable large-scale structural bioinformatics. Predicting the three-dimensional structure that a protein will adopt based solely on its amino acid sequence—the structure prediction component of the 'protein folding problem'8—has been an important open research problem for more than 50 years9. Despite recent progress10-14, existing methods fall far short of atomic accuracy, especially when no homologous structure is available. Here we provide the first computational method that can regularly predict protein structures with atomic accuracy even in cases in which no similar structure is known. We validated an entirely redesigned version of our neural network-based model, AlphaFold, in the challenging 14th Critical Assessment of protein Structure Prediction (CASP14)15, demonstrating accuracy competitive with experimental structures in a majority of cases and greatly outperforming other methods. Underpinning the latest version of AlphaFold is a novel machine learning approach that incorporates physical and biological knowledge about protein structure, leveraging multi-sequence alignments, into the design of the deep learning algorithm.},
+  language  = {en},
+  number    = {7873},
+  urldate   = {2024-10-29},
+  journal   = {Nature},
+  author    = {Jumper, John and Evans, Richard and Pritzel, Alexander and Green, Tim and Figurnov, Michael and Ronneberger, Olaf and Tunyasuvunakool, Kathryn and Bates, Russ and Žídek, Augustin and Potapenko, Anna and Bridgland, Alex and Meyer, Clemens and Kohl, Simon A. A. and Ballard, Andrew J. and Cowie, Andrew and Romera-Paredes, Bernardino and Nikolov, Stanislav and Jain, Rishub and Adler, Jonas and Back, Trevor and Petersen, Stig and Reiman, David and Clancy, Ellen and Zielinski, Michal and Steinegger, Martin and Pacholska, Michalina and Berghammer, Tamas and Bodenstein, Sebastian and Silver, David and Vinyals, Oriol and Senior, Andrew W. and Kavukcuoglu, Koray and Kohli, Pushmeet and Hassabis, Demis},
+  month     = aug,
+  year      = {2021},
+  note      = {Publisher: Nature Publishing Group},
+  keywords  = {Computational biophysics, Machine learning, Protein structure predictions, Structural biology},
+  pages     = {583--589}
+}
+
+@article{bryant_2022,
+  title    = {Predicting the structure of large protein complexes using {AlphaFold} and {Monte} {Carlo} tree search},
+  volume   = {13},
+  issn     = {2041-1723},
+  url      = {https://www.nature.com/articles/s41467-022-33729-4},
+  doi      = {10.1038/s41467-022-33729-4},
+  abstract = {Abstract 
+              
+              AlphaFold can predict the structure of single- and multiple-chain proteins with very high accuracy. However, the accuracy decreases with the number of chains, and the available GPU memory limits the size of protein complexes which can be predicted. Here we show that one can predict the structure of large complexes starting from predictions of subcomponents. We assemble 91 out of 175 complexes with 10-30 chains from predicted subcomponents using Monte Carlo tree search, with a median TM-score of 0.51. There are 30 highly accurate complexes (TM-score ≥0.8, 33\% of complete assemblies). We create a scoring function, mpDockQ, that can distinguish if assemblies are complete and predict their accuracy. We find that complexes containing symmetry are accurately assembled, while asymmetrical complexes remain challenging. The method is freely available and accesible as a Colab notebook 
+              https://colab.research.google.com/github/patrickbryant1/MoLPC/blob/master/MoLPC.ipynb 
+              .},
+  language = {en},
+  number   = {1},
+  urldate  = {2024-12-12},
+  journal  = {Nature Communications},
+  author   = {Bryant, Patrick and Pozzati, Gabriele and Zhu, Wensi and Shenoy, Aditi and Kundrotas, Petras and Elofsson, Arne},
+  month    = oct,
+  year     = {2022},
+  pages    = {6028}
+}
+
+@article{corso_graph_2024,
+  title    = {Graph neural networks},
+  volume   = {4},
+  issn     = {2662-8449},
+  url      = {https://doi.org/10.1038/s43586-024-00294-7},
+  doi      = {10.1038/s43586-024-00294-7},
+  abstract = {Graphs are flexible mathematical objects that can represent many entities and knowledge from different domains, including in the life sciences. Graph neural networks (GNNs) are mathematical models that can learn functions over graphs and are a leading approach for building predictive models on graph-structured data. This combination has enabled GNNs to advance the state of the art in many disciplines, from discovering new antibiotics and identifying drug-repurposing candidates to modelling physical systems and generating new molecules. This Primer provides a practical and accessible introduction to GNNs, describing their properties and applications to the life and physical sciences. Emphasis is placed on the practical implications of key theoretical limitations, new ideas to solve these challenges and important considerations when using GNNs on a new task.},
+  number   = {1},
+  journal  = {Nature Reviews Methods Primers},
+  author   = {Corso, Gabriele and Stark, Hannes and Jegelka, Stefanie and Jaakkola, Tommi and Barzilay, Regina},
+  month    = mar,
+  year     = {2024},
+  pages    = {17}
+}
+
+@article{davis_2011,
+  title     = {Comprehensive analysis of kinase inhibitor selectivity},
+  volume    = {29},
+  copyright = {2011 Springer Nature America, Inc.},
+  issn      = {1546-1696},
+  url       = {https://www.nature.com/articles/nbt.1990},
+  doi       = {10.1038/nbt.1990},
+  abstract  = {Davis et al. extend their previous efforts to use inhibitor-kinase interactions to understand kinase inhibitor selectivity by profiling the binding of 72 kinase inhibitors to 442 human kinase catalytic domains. The data reveal group-specific differences in selectivity and suggest the feasibility of developing reasonably specific inhibitors for most kinases.},
+  language  = {en},
+  number    = {11},
+  urldate   = {2024-12-08},
+  journal   = {Nature Biotechnology},
+  author    = {Davis, Mindy I. and Hunt, Jeremy P. and Herrgard, Sanna and Ciceri, Pietro and Wodicka, Lisa M. and Pallares, Gabriel and Hocker, Michael and Treiber, Daniel K. and Zarrinkar, Patrick P.},
+  month     = nov,
+  year      = {2011},
+  note      = {Publisher: Nature Publishing Group},
+  keywords  = {Drug discovery, Functional genomics, Kinases},
+  pages     = {1046--1051}
+}
+
+@article{dobson_distinguishing_2003,
+  title    = {Distinguishing {Enzyme} {Structures} from {Non}-enzymes {Without} {Alignments}},
+  volume   = {330},
+  issn     = {0022-2836},
+  url      = {https://www.sciencedirect.com/science/article/pii/S0022283603006284},
+  doi      = {10.1016/S0022-2836(03)00628-4},
+  abstract = {The ability to predict protein function from structure is becoming increasingly important as the number of structures resolved is growing more rapidly than our capacity to study function. Current methods for predicting protein function are mostly reliant on identifying a similar protein of known function. For proteins that are highly dissimilar or are only similar to proteins also lacking functional annotations, these methods fail. Here, we show that protein function can be predicted as enzymatic or not without resorting to alignments. We describe 1178 high-resolution proteins in a structurally non-redundant subset of the Protein Data Bank using simple features such as secondary-structure content, amino acid propensities, surface properties and ligands. The subset is split into two functional groupings, enzymes and non-enzymes. We use the support vector machine-learning algorithm to develop models that are capable of assigning the protein class. Validation of the method shows that the function can be predicted to an accuracy of 77\% using 52 features to describe each protein. An adaptive search of possible subsets of features produces a simplified model based on 36 features that predicts at an accuracy of 80\%. We compare the method to sequence-based methods that also avoid calculating alignments and predict a recently released set of unrelated proteins. The most useful features for distinguishing enzymes from non-enzymes are secondary-structure content, amino acid frequencies, number of disulphide bonds and size of the largest cleft. This method is applicable to any structure as it does not require the identification of sequence or structural similarity to a protein of known function.},
+  number   = {4},
+  urldate  = {2024-12-08},
+  journal  = {Journal of Molecular Biology},
+  author   = {Dobson, Paul D. and Doig, Andrew J.},
+  month    = jul,
+  year     = {2003},
+  keywords = {enzyme, machine learning, protein function prediction, structural genomics, structure},
+  pages    = {771--783}
+}
+
+@article{gligorijevic_structure-based_2021,
+  title     = {Structure-based protein function prediction using graph convolutional networks},
+  volume    = {12},
+  copyright = {2021 The Author(s)},
+  issn      = {2041-1723},
+  url       = {https://www.nature.com/articles/s41467-021-23303-9},
+  doi       = {10.1038/s41467-021-23303-9},
+  abstract  = {The rapid increase in the number of proteins in sequence databases and the diversity of their functions challenge computational approaches for automated function prediction. Here, we introduce DeepFRI, a Graph Convolutional Network for predicting protein functions by leveraging sequence features extracted from a protein language model and protein structures. It outperforms current leading methods and sequence-based Convolutional Neural Networks and scales to the size of current sequence repositories. Augmenting the training set of experimental structures with homology models allows us to significantly expand the number of predictable functions. DeepFRI has significant de-noising capability, with only a minor drop in performance when experimental structures are replaced by protein models. Class activation mapping allows function predictions at an unprecedented resolution, allowing site-specific annotations at the residue-level in an automated manner. We show the utility and high performance of our method by annotating structures from the PDB and SWISS-MODEL, making several new confident function predictions. DeepFRI is available as a webserver at https://beta.deepfri.flatironinstitute.org/.},
+  language  = {en},
+  number    = {1},
+  urldate   = {2024-10-31},
+  journal   = {Nature Communications},
+  author    = {Gligorijević, Vladimir and Renfrew, P. Douglas and Kosciolek, Tomasz and Leman, Julia Koehler and Berenberg, Daniel and Vatanen, Tommi and Chandler, Chris and Taylor, Bryn C. and Fisk, Ian M. and Vlamakis, Hera and Xavier, Ramnik J. and Knight, Rob and Cho, Kyunghyun and Bonneau, Richard},
+  month     = may,
+  year      = {2021},
+  note      = {Publisher: Nature Publishing Group},
+  keywords  = {Machine learning, Protein function predictions, Protein structure predictions},
+  pages     = {3168}
+}
+
+@article{lin_evolutionary-scale_2023,
+  title    = {Evolutionary-scale prediction of atomic-level protein structure with a language model},
+  volume   = {379},
+  issn     = {0036-8075, 1095-9203},
+  url      = {https://www.science.org/doi/10.1126/science.ade2574},
+  doi      = {10.1126/science.ade2574},
+  abstract = {Recent advances in machine learning have leveraged evolutionary information in multiple sequence alignments to predict protein structure. We demonstrate direct inference of full atomic-level protein structure from primary sequence using a large language model. As language models of protein sequences are scaled up to 15 billion parameters, an atomic-resolution picture of protein structure emerges in the learned representations. This results in an order-of-magnitude acceleration of high-resolution structure prediction, which enables large-scale structural characterization of metagenomic proteins. We apply this capability to construct the ESM Metagenomic Atlas by predicting structures for {\textgreater}617 million metagenomic protein sequences, including {\textgreater}225 million that are predicted with high confidence, which gives a view into the vast breadth and diversity of natural proteins.
+              , 
+              Speedy structures from single sequences
+              
+              Machine learning methods for protein structure prediction have taken advantage of the evolutionary information present in multiple sequence alignments to derive accurate structural information, but predicting structure accurately from a single sequence is much more difficult. Lin
+              et al
+              . trained transformer protein language models with up to 15 billion parameters on experimental and high-quality predicted structures and found that information about atomic-level structure emerged in the model as it was scaled up. They created ESMFold, a sequence-to-structure predictor that is nearly as accurate as alignment-based methods and considerably faster. The increased speed permitted the generation of a database, the ESM Metagenomic Atlas, containing more than 600 million metagenomic proteins. —MAF
+              
+              , 
+              A protein language model enables structure prediction and analysis of more than 600 million metagenomic proteins.},
+  language = {en},
+  number   = {6637},
+  urldate  = {2024-10-31},
+  journal  = {Science},
+  author   = {Lin, Zeming and Akin, Halil and Rao, Roshan and Hie, Brian and Zhu, Zhongkai and Lu, Wenting and Smetanin, Nikita and Verkuil, Robert and Kabeli, Ori and Shmueli, Yaniv and Dos Santos Costa, Allan and Fazel-Zarandi, Maryam and Sercu, Tom and Candido, Salvatore and Rives, Alexander},
+  month    = mar,
+  year     = {2023},
+  pages    = {1123--1130}
+}
+
+@article{nguyen_2024,
+  title    = {Multimodal pretraining for unsupervised protein representation learning},
+  volume   = {9},
+  issn     = {2396-8923},
+  url      = {https://doi.org/10.1093/biomethods/bpae043},
+  doi      = {10.1093/biomethods/bpae043},
+  abstract = {Proteins are complex biomolecules essential for numerous biological processes, making them crucial targets for advancements in molecular biology, medical research, and drug design. Understanding their intricate, hierarchical structures, and functions is vital for progress in these fields. To capture this complexity, we introduce Multimodal Protein Representation Learning (MPRL), a novel framework for symmetry-preserving multimodal pretraining that learns unified, unsupervised protein representations by integrating primary and tertiary structures. MPRL employs Evolutionary Scale Modeling (ESM-2) for sequence analysis, Variational Graph Auto-Encoders (VGAE) for residue-level graphs, and PointNet Autoencoder (PAE) for 3D point clouds of atoms, each designed to capture the spatial and evolutionary intricacies of proteins while preserving critical symmetries. By leveraging Auto-Fusion to synthesize joint representations from these pretrained models, MPRL ensures robust and comprehensive protein representations. Our extensive evaluation demonstrates that MPRL significantly enhances performance in various tasks such as protein-ligand binding affinity prediction, protein fold classification, enzyme activity identification, and mutation stability prediction. This framework advances the understanding of protein dynamics and facilitates future research in the field. Our source code is publicly available at https://github.com/HySonLab/Protein\_Pretrain.},
+  number   = {1},
+  urldate  = {2024-10-29},
+  journal  = {Biology Methods and Protocols},
+  author   = {Nguyen, Viet Thanh Duy and Hy, Truong Son},
+  month    = jan,
+  year     = {2024},
+  pages    = {bpae043}
+}
+
+@article{sherva,
+  title   = {Weisfeiler-{Lehman} {Graph} {Kernels}},
+  volume  = {12},
+  url     = {http://jmlr.org/papers/v12/shervashidze11a.html},
+  number  = {77},
+  journal = {Journal of Machine Learning Research},
+  author  = {Shervashidze, Nino and Schweitzer, Pascal and Leeuwen, Erik Jan van and Mehlhorn, Kurt and Borgwardt, Karsten M.},
+  year    = {2011},
+  pages   = {2539--2561}
 }
