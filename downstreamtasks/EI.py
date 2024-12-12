@@ -109,7 +109,7 @@ def load_data(modal, data_folder, batches):
     df = pd.read_csv(f'{data_folder}/label.csv')
     idx = df['id'] != '1AA6'
     df = df[idx] # Remove the row with the non-standard amino acid
-    X = X[idx]
+    # X = X[idx]
     y = df['label']
     fold_ids = df['fold_id']
     
