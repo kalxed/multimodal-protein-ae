@@ -2,39 +2,14 @@ import glob
 import os
 import os.path as osp
 
-import numpy as np
 import torch
 from Bio.PDB import MMCIFParser
 from tqdm import tqdm
 
-parser = MMCIFParser(QUIET=True)
+from mpae.utils import structure_file_to_pointcloud
 
-# Function to convert a CIF file to a point cloud
-def structure_file_to_pointcloud(pdb_path, desired_num_points=2048):
-    try:
-        structure = parser.get_structure('protein', pdb_path)
-    except Exception:
-        return None
-    
-    # cap the number of points to add
-    coordinates = np.zeros((desired_num_points, 3))
-
-    for i, atom in enumerate(structure.get_atoms()):
-        if i == desired_num_points:
-            break
-        coordinates[i] = atom.get_coord()
-    
-    # Center and normalize the point cloud
-    # I think that there is a better way to do this. oh well.
-    coordinates = torch.tensor(coordinates, dtype=torch.float32)
-    coordinates -= coordinates.mean(0)
-    d = torch.sqrt((coordinates ** 2.0).sum(1))
-    coordinates /= d.max()
-    coordinates = torch.FloatTensor(coordinates).permute(1, 0)
-    return coordinates
-
-# Directory containing PDB files
-structure_dir = os.path.join("data", "raw-structures", "")
+# Directory containing protein structure files
+structure_dir = osp.join("data", "raw-structures", "")
 
 # sort it to ensure that they are correctly divided among the different array tasks
 structure_files = sorted([f for f in glob.glob(f"{structure_dir}*.cif")])
@@ -48,14 +23,16 @@ files_to_process = total_files // ntasks
 first_file = files_to_process * task_idx
 last_file = total_files if task_idx == (ntasks - 1) else (first_file + files_to_process)
 
-res_dir = osp.join('data', 'pointclouds', '')
+res_dir = osp.join("data", "pointclouds", "")
 os.makedirs(res_dir, exist_ok=True)
+
+parser=MMCIFParser(QUIET=True)
 
 # We want to construct a pytorch geometric graph object for each protein, and then save this to a file. 
 n = 0
 for i in tqdm(range(first_file, last_file), desc="Processing files"):
     structure_file = structure_files[i]
-    data = structure_file_to_pointcloud(structure_file)
+    data = structure_file_to_pointcloud(structure_file, parser=parser)
     if data is not None:
         # get the basename of the file without the extension, get new file path with the .pt extension in result directory
         fname = f"{res_dir}{osp.splitext(osp.basename(structure_file))[0]}.pt" 
