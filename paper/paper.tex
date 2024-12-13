@@ -98,7 +98,7 @@
 %\footnotetext{hi}
 
 \begin{abstract} 
-Protein data is large and unruly to work with so a solution of an embedding of protein data would allow more efficient downstream training would help decrease the computational load on tasks relating to proteins. We expand on the work of Nguyen \& Hy on multimodal protein autoencoding. We employed an experimentally verified dataset, changed their VGAE implementation, and employed attention and a concrete autoencoder, all as potential improvements to their approach. Our approach of VGAE led to improvements in the graph embedding by 0.4\% on the enzyme identification downstream based on our data. Our best performing AutoEncoder for the fused data had a loss of 0.25 MSE.
+Protein data is large and unruly to work with so a solution of an embedding of protein data would allow more efficient downstream training would help decrease the computational load on tasks relating to proteins. We expand on the work of Nguyen \& Hy on multimodal protein autoencoding. We employed an experimentally verified dataset, changed their VGAE implementation, and employed attention and a concrete autoencoder, all as potential improvements to their approach. Our approach of VGAE led to improvements in the graph embedding by 0.4\% on the enzyme identification downstream based on our data. Our best performing autoEncoder for the fused data was a naive autoencoder which had a loss of 0.25 MSE compared to their 0.03, but this led to more questions about their reported results. Besides these notable results, a naive autoencoder was seen to be the most effective model for embedding our protein data, but our embedding dimension was 64 while the paper used 1024. This resulted in the data taking up 257 times less space in our case.
 \end{abstract} 
 
 \section{Introduction}
@@ -282,7 +282,7 @@ It is worth mentioning that the same pretrained model ESM-2 performed worse when
 
 In terms of the performance of the multimodal representation, we believe its poor evaluations were in part due to the decrease in latent dimensionality, which was far less than Nyugen and Hy. The embeddings may have been reduced in dimensionality too much to preserve enough information to learn from.
 
-Downstream tasks stuff here.
+For the downstream tasks otherwise we saw much lower accuracy in our model than in their MPRL using fused encodings. This is most likely due to the embedding size, relative dataset size, or a combination of both.
 
 We wanted to see if only experimental structures would be enough. The variety, heterogeneity, and noise present in experimental structures makes training autoencoders difficult with this relatively small amount of data. The success that came from this was that we were able to derive a VGAE model that minutely improved the work done by Nguyen \& Hy (Table \ref{tab:VGAE_results}).
 
@@ -293,7 +293,13 @@ Our graph model performed remarkably well, and outperformed the previous graph m
 
 An evaluation that would be valuable would be to compare across all of our evaluations to see how the original project architecture and pipeline performed using only peer-reviewed experimental protein structures. Another way to further evaluate would be to explore datasets similar in size on both proposed methodologies. This would uncover the impact of training on more peer-reviewed protein structure data or the performance of less predicted protein structures from AlphaFold. 
 
-With the rapid growth in machine learning and artificial intelligence, this project serves as a reminder to stay grounded in fundamental principles in physics, chemistry, and biology, and let those inform the development of novel analytical techniques that will transform our biomedical knowledge.
+Comparing both models to more downstream tasks would also improve the verification of the embeddings for both. As well handling non-standard amino acids would've allowed us to process 33\% more data. These sorts of autoencoding models also open up the possibility to see how they perform predicting other modalities from inputs in one modality. This turns just the simple autoencoder to somewhat of a prediction tool as well. Further hyperparameter tuning would also be necessary to fully take advantage of all this sort of model has to provide.
+
+Finally, using an encoding scheme for graphs, sequence, and structure that allows them not truncated or padded would allow for more data to remain going into the model and would accurately represent a protein in multiple modalities instead of losing more information going into the fused embedding. This would probably improve the performance of both Nguyen \& Hy as well as our derived model.
+
+\section{Github}
+
+All code can be found \hyperlink{https://github.com/kalxed/multimodal-protein-ae}{here on Github}.
 
 \bibliography{paper}
 \bibliographystyle{cs541}
