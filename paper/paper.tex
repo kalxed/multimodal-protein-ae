@@ -20,6 +20,8 @@
 % For algorithms
 \usepackage{algorithm}
 \usepackage{algorithmic}
+% For Table
+\usepackage{tabularx}
 
 % As of 2011, we use the hyperref package to produce hyperlinks in the
 % resulting PDF.  If this breaks your system, please commend out the
@@ -36,12 +38,17 @@
 
 % The \icmltitle you define below is probably too long as a header.
 % Therefore, a short form for the running title is supplied here:
-\icmltitlerunning{Title of My Paper}
 
+% \icmltitlerunning{Multimodal Autoencoders for Protein Structure Encoding}
+% PROPOSED TITLE:
+\icmltitlerunning{Unsupervised Feature Learning for Multimodal Protein Structure Encoding}
 \begin{document} 
 
 \twocolumn[
-\icmltitle{Title of My Paper}
+% \icmltitle{Exploring Multimodal Autoencoders for Protein Structure Encoding}
+% PROPOSED TITLE
+\icmltitle{Unsupervised Feature Learning for Multimodal Protein Structure Encoding}
+
 
 % It is OKAY to include author information, even for blind
 % submissions: the style file will automatically remove it for you
@@ -59,18 +66,21 @@
 \icmlsetsymbol{equal}{*}
 
 \begin{icmlauthorlist}
-\icmlauthor{Aeiau Zzzz}{wpi}
-\icmlauthor{Bauiu C.~Yyyy}{wpi}
+\icmlauthor{Peter Howell}{wpibcb,wpics}
+\icmlauthor{Kai Davidson}{wpibcb,wpics}
+\icmlauthor{Alexsandra Antoski}{wpics,wpids}
 \end{icmlauthorlist}
 
-\icmlaffiliation{wpi}{Worcester Polytechnic Institute}
+\icmlaffiliation{wpics}{Department of Computer Science, Worcester Polytechnic Institute}
+\icmlaffiliation{wpibcb}{Program in Bioinformatics \& Computational Biology, Worcester Polytechnic Institute}
+\icmlaffiliation{wpids}{Program in Data Science, Worcester Polytechnic Institute}
 
-\icmlcorrespondingauthor{Cieua Vvvvv}{c.vvvvv@wpi.edu}
+\icmlcorrespondingauthor{Peter Howell}{pjhowell@wpi.edu}
 
 % You may provide any keywords that you 
 % find helpful for describing your paper; these are used to populate 
 % the "keywords" metadata in the PDF but will not be shown in the document
-\icmlkeywords{boring formatting information, machine learning, ICML}
+\icmlkeywords{Deep Learning, Protein Structure, AutoEncoders, ICML}
 
 \vskip 0.3in
 ]
@@ -88,41 +98,208 @@
 %\footnotetext{hi}
 
 \begin{abstract} 
-Describe {\bf briefly} the computational problem you tackled, the approach you explored, the analyses you performed, and the results you obtained.
-Point out advantages of your approach compared to prior approaches (if any).
+Protein data is large and unruly to work with so a solution of an embedding of protein data would allow more efficient downstream training would help decrease the computational load on tasks relating to proteins. We expand on the work of Nguyen \& Hy on multimodal protein autoencoding. We employed an experimentally verified dataset, changed their VGAE implementation, and employed attention and a concrete autoencoder, all as potential improvements to their approach. Our approach of VGAE led to improvements in the graph embedding by 0.4\% on the enzyme identification downstream based on our data. Our best performing autoEncoder for the fused data was a naive autoencoder which had a loss of 0.25 MSE compared to their 0.03, but this led to more questions about their reported results. Besides these notable results, a naive autoencoder was seen to be the most effective model for embedding our protein data, but our embedding dimension was 64 while the paper used 1024. This resulted in the data taking up 257 times less space in our case.
 \end{abstract} 
 
 \section{Introduction}
-{\bf Problem before solution}:
-Begin by describing a (computational) {\bf problem} and why the problem is {\bf important}. If previous research has
-explored plausible solutions to solve the problem, then point out how these approaches may be lacking. Then briefly {\bf motivate}
-why a new approach (the approach you explore in this paper) is worth exploring. Don't go into too much detail yet how it works -- that will
-be left for Section \ref{sec:proposed_method}).
+
+Biological systems are complex to understand. Figuring out how they work requires a deep understanding of the many organic molecules within an organism, but also experimental data to verify these results. This data can end up being massive in scale, so the shift to using computational methods for analyzing it has led to the development of fields like Bioinformatics. In the last decade, there has been frequent development of novel methodologies that take advantage of the vast amounts of biological data, and there has been much success using techniques in Deep Learning like AlphaFold, which recently won a Nobel Prize \cite{alphafold}. In particular, proteins are an essential building block of biology, and there are numerous databases devoted to storing all of the data associated with the expression of these proteins. We wanted to leverage deep learning approaches to try to learn meaningful representations from protein data while minimizing storage costs. In addition, creating an embedding that maintains the important features of proteins may increase the accuracy with downstream tasks.
+
 
 \subsection{Research contributions}
-Describe clearly and concisely what your paper {\bf uniquely} contributes to the research community, i.e., that has never been done before.
+
+We leveraged existing work done by Nguyen \& Hy \citeyearpar{nguyen_2024} who also tried to tackle this problem. We modified some of their approaches and changed their dataset to purely experimentally verified protein structures to address an issue we saw with their experimental method. We are verifying their results with a smaller dataset that is based on the biology and research that has been experimentally done up to this point. We tested the efficacy of this task on the data that is available through traditional methods. We also changed the graph embedding method which we believe improved our results in this modality, though due to the dataset difference we can’t be entirely sure. We tested different autoencoders for our fused data as well to measure the difference between the efficacy of encoding models. As well we varied the number of features to embed the data which varied our results further. All of the results we derived lead to helping point out some inconsistencies with replicating their work on experimental proteins, as well as future approaches that could be applied to increase performance.
 
 \section{Related Work}
-Describe previous approaches (in somewhat greater detail than the introduction) to tackling the problem. Pick any citation style you prefer and use it
-consistently (here's a random citation \cite{mitchell80}). Explain how previous work may be lacking in certain ways, and use your critical review
-of prior work to further motivate your research.
+The paper “Multimodal pretraining for unsupervised protein representation learning” by Nguyen \& Hy \citeyearpar{nguyen_2024} delves directly into our topic of interest. The issue we found with their approach is that they use solely generated structures from AlphaFold. Their dataset consisted of approximately five hundred thousand generated proteins by AlphaFold. This raises concern with the overall validity of their results. AlphaFold, by Google DeepMind, is an AI model that predicts protein structures with accuracy comparable to experimental results \cite{alphafold}. Although accurate, these structures are still uncertain and not all reviewed. Additionally, AlphaFold’s performance “declines rapidly” for proteins with over two chains \cite{bryant_2022}. We propose that using purely generated structures could cause uniformity as well as embed any AlphaFold model folding bias into their embeddings. Another consideration of using generated structures is the confidence level for certain structures. When processed in their code, the embeddings don’t have any consideration for the confidence level of the AlphaFold structures leading to training on these structures just producing noise from the error. 
+
+Details of their implementation, also brought up possible improvements in their methodology. Their VGAE embedding wasn’t based on the biology of distance between residues, so we modified their implementation to be and some inconsistent error rates made this an interesting problem to do further research on.
+
+The other work that we drew inspiration from during our project was the paper preprint from \cite{abid_2019}. We wanted to see how the use of a temperature value could improve embedding down to a specified dimension for our protein encodings. 
 
 \section{Proposed Method}
 \label{sec:proposed_method}
-Describe the computational approach -- based obviously on neural networks -- that you took to tackle the problem.
+Our pipeline was very similar to that of Nyugen and Hy, though we had a few developments we hoped would offer improvements \cite{nguyen_2024}. The overall process consisted of preprocessing to transform the raw protein structure into a graph, point cloud, and tokenized sequence, then using an autoencoder on each of these three modalities, then combining these representations and using a final autoencoder on this combination. Firstly, we altered the construction of the graphs to be more grounded in biochemistry, connecting two nodes with an edge when they are within 6 $\mathring {\mathrm A}$ of each other \cite{sherva}. We also experimented with several different autoencoders at the last step of the pipeline. We replace the AutoFusion method with a variation of Concrete Autoencoders, which use temperature to introduce noise during the training process to gradually reduce the input to the latent space \cite{abid_2019}. We added a layer of multi-headed self-attention prior to the concrete autoencoder to hopefully contextualize the concatenated representations and enable a more meaningful final representation to be learned.
+
+In addition to altering the computational architecture, we also elected to use a different data source. Due to the reasons mentioned in the previous section, we stuck with experimentally verified and annotated structures. We started with roughly 36,000 mmCIF files from UniProtKB, all of which had been reviewed and had an experimentally verified 3D protein structure. 
+
+Experimental structures are much more expensive and difficult to verify. The leading method is using X-Ray Crystallography which researchers use to find the structure of proteins down to a few angstroms of precision. The issue is the arduous process involved with finding the 3D structure of any protein can take months, which is why at the current moment there are so few experimentally validated protein structures.
+
+Nyugen and Hy processed modalities ignoring non-standard amino acids, as in they skipped adding a value when processing graphs and sequences. Here we ignored proteins that contained any non-standard amino acids, giving us a more honest representation of the protein’s structure. 
+
+Finally, we swapped out their autoencoder implementation, and tried various replacements: a concrete autoencoder with and without self attention, and a modified autoencoder architecture also with and without self attention. 
 
 \section{Experiment}
-Describe the computational experiments you conducted to validate the approach you took.
+There are three parts where we evaluated our model's success; comparing success encoding and decoding; implementing two of the downstream tasks proposed in the original project, and seeing the performance of the original project given our dataset. 
+
+We compared the performance of encoding and decoding using MSE. We did not modify the PAE or ESM-2 models, but since they are trained on a different set of data this gives us some insight on the performance of these models given reviewed protein structures. 
+
+We also trained Nguyen \& Hy’s exact VGAE with their method for graph construction on our data. We saw that in this case, our model outperformed theirs, achieving lower reconstruction loss on pretraining and higher accuracy in the protein-ligand affinity downstream task.
+
+Since the bulk of the computational load came from the initial processing and encoding stage, we were able to train several versions of the last layer encoding. This included concrete and not concrete autoencoders with and without attention. We were not able to experiment with other hyperparameters like the initial temperature of the concrete autoencoders. We used each of these four models in our downstream tasks.
+
+For the two downstream tasks, we have enzyme identification and protein ligand-binding affinity. Given the time to process and train our models and lack of data availability, we were unable to fully implement all four downstream tasks. To give the best comparison we used the same hyperparameters and evaluation metrics.
+
+The final evaluation we took was to compare the results of our pipeline versus the original using our dataset. We only were able to compare their VGAE on our model but due to the computational cost of encoding all proteins with the models we were unable to run their entire codebase on our protein data.
 
 \section{Results}
-Describe the results of the experiments, including their immediate implications (e.g., ``the result suggests that technique A performs better
-than technique B''). If your work is purely theoretical, then this section (as well as the previous section) might be replaced with mathematical proofs.
+For both pretraining and downstream tasks, Nyugen and Hy’s work performed better than ours, other than pre-training on VGAE. The results from VGAE pretraining on the peer-reviewed structures indicated that the residue based graph construction is potentially a better approach, as less data was needed to train the model to the performance of Nyugen and Hy’s.
+
+\begin{table}[h]
+    \centering
+    \begin{tabular}{|c | c | c | c|} 
+ \hline
+ \bf{Data} & \bf{Metric} & \bf{Nguyen \& Hy} & \bf{Our Results} \\ [0.5ex] 
+ \hline
+ Train & MSE & 0.951 & 0.9896 \\ 
+ \hline
+ Validation & MSE & 0.952 & 0.9951 \\
+ \hline
+ Test & AUC & 0.95 & 0.9551 \\
+ \hline
+ MSE & Precision & 0.97 & 0.9716 \\
+ \hline
+\end{tabular}
+    \caption{VGAE pretraining results}
+    \label{tab:VGAE_results}
+\end{table}
+
+For the PAE, we used the same architecture and process but trained on only peer-reviewed protein structures. This PAE model had a high MSE, nearly double that obtained by Nguyen and Hy.
+
+\begin{table}[h]
+    \centering
+    \begin{tabular}{|c  c  c  c|} 
+ \hline
+ \bf{Data} & \bf{Metric} & \bf{Nguyen \& Hy} & \bf{Our Results} \\ 
+ \hline
+ Train & MSE & 6.51 & 11.7226 \\ 
+ \hline
+ Validation & MSE & 7.84 & 12.97 \\
+ \hline
+ Test & Chamfer & 7.89 & 12.8688 \\
+ \hline
+\end{tabular}
+    \caption{PAE pretraining results}
+    \label{tab:PAE_results}
+\end{table}
+
+The results from pretraining our multiple configurations of the CAE did not perform better than the MPRL model. Our best performing configuration was a standard autoencoder with the following architecture: 
+
+Nguyen \& Hy : 640 * 3 $\to$ $\frac{(640 * 3)}{2}$ $\to$ 1024
+
+Ours: 640 * 3 $\to$ 640 $\to$ 64
+
+The results of the pretraining of the multimodal models can be seen in the table below.
+
+\begin{table}[h]
+    \centering
+    \begin{tabular}{|c  c  c  r|} 
+ \hline
+    \textbf{Model} & \textbf{Train} & \textbf{Validation} & \textbf{Test} \\
+    \hline
+ Nguyen \& Hy &  0.03 & 0.299 & 0.03\\
+ \hline
+ Our CAE & 0.4123 & 0.4109 & 0.4121 \\
+ \hline
+ Our CAE + Attention & 0.3964 & 0.3933 & 0.3945 \\
+ \hline
+ Our AE & 0.2513 & 0.2540 & 0.2506\\
+ \hline
+ Our AE + Attention & 0.2613 & 0.2671 & 0.2636\\ 
+ \hline
+\end{tabular}
+    \caption{Multimodal pretraining reconstruction MSE results}
+    \label{tab:CAE_pretrain}
+\end{table}
+
+The inclusion of the concrete layer in our final encoder did not benefit the model's performance, nor did attention. Our simple autoencoder with and without attention outperformed the validation loss of Nguyen and Hy, however not the train or test loss. This was a cause for skepticism that we elaborate on in the discussion.
+
+In the downstream tasks, models trained on our data did not perform as well. In the first task of enzyme identification, we achieved relatively lower accuracy than Nguyen and Hy's models. However, we were able to duplicate their graph approach but train it on our data, and found that our graph approach with radial edge connections outperformed it \ref{tab:EI_results}.
+\begin{table}[h]
+    \centering
+    \begin{tabular}{|l  r|} 
+ \hline
+ \bf{Model} & \bf{Accuracy} \\ 
+ \hline\hline
+ \textit{Single-Mode Encoding} & \\
+ \hline
+VGAE (Nguyen \& Hy) & \textbf{81.4} \\ 
+
+ VGAE (Nguyen \& Hy Our Data) & 72.35 \\
+VGAE (Ours) & \textbf{\textit{72.75}} \\ 
+\hline
+PAE (Nguyen \& Hy) & \textbf{80.4} \\
+PAE (Ours) & 62.44 \\
+\hline
+ESM-2 (Nguyen \& Hy) & \textbf{82.7?} \\
+ESM-2 (Ours) & 75.4 \\
+\hline\hline
+\textit{Multimodal Encoding} & \\
+\hline
+MPRL (Nguyen \& Hy) & \textbf{83.9} \\
+AE & 67.45 \\
+AE + Attention & 65.75 \\
+CAE & 65.16 \\
+CAE + Attention & 59.19 \\
+\hline
+\end{tabular}
+    \caption{Enzyme identification downstream task results }
+    \label{tab:EI_results}
+\end{table}
+
+Our PLA results didn't show any improvement on that of Nguyen \& Hy. As seen in the table below. This shows that the reduction in performance could be linked to relative size of the datasets.
+
+\begin{table}[h]
+    \centering
+    \begin{tabular}{|l c c r|} 
+ \hline
+ \bf{Model} & \bf{MSE $\downarrow$} & \textbf{CI $\uparrow$} & $r_m^2$ \\
+ \hline\hline
+ \textit{Single-Mode Encoding} & \\
+ \hline
+VGAE (Nguyen \& Hy) & 0.508 & 0.631 & 0.032 \\ 
+VGAE (Ours) & 0.818 & 0.529 & -0.152 \\ 
+\hline\hline
+\textit{Multimodal Encoding} & \\
+\hline
+MPRL (Nguyen \& Hy) & 0.248 & 0.699 & 0.414 \\
+AE & 0.733 & 0.578 & -0.55 \\
+AE + Attention & 0.740 & 0.5777 & -0.454 \\
+CAE & 0.740 & 0.5779 & -0.453 \\
+CAE + Attention & 0.733 & 0.578 & -0.55 \\
+\hline
+\end{tabular}
+    \caption{Protein ligand binding affinity downstream task results }
+    \label{tab:PLA_results}
+\end{table}
 
 \section{Discussion}
-Describe limitations of your work as well as further-ranging implications (e.g., ``our work suggests that doing XYZ in general may be a useful approach to...'').
+The models trained on our smaller dataset of experimental structures performed worse in every metric on the downstream tasks. However, we evaluated their VGAE implementation on our data set and the result aligned with our findings from pretraining, indicating that radius-based edge creation may be more effective at encoding the graph representation of a protein. 
+
+As mentioned previously, the PAE model was not modified in architecture, but it was trained on a different dataset. Here there was not as significant a difference in error as the autoencoder implementations. We believe that the higher error rate is indicative of the variability of the experimental structures compared to what might be more uniform structures generated by AlphaFold. In addition, a larger dataset may aid in the encoding of point cloud structures as it may be able to find uniform patterns among all of the data leading to a lower overall loss during reconstruction.
+ 
+It is worth mentioning that the same pretrained model ESM-2 performed worse when we evaluated this task. This confuses us as the pretrained model has not been updated for over 2 years and we are evaluating off of the same dataset proposed in their paper. Similarly, our modifications did not compare to the results given by Nyugen and Hy. We are therefore somewhat skeptical of the results presented by Nguyen and Hy.
+
+In terms of the performance of the multimodal representation, we believe its poor evaluations were in part due to the decrease in latent dimensionality, which was far less than Nyugen and Hy. The embeddings may have been reduced in dimensionality too much to preserve enough information to learn from.
+
+For the downstream tasks otherwise we saw much lower accuracy in our model than in their MPRL using fused encodings. This is most likely due to the embedding size, relative dataset size, or a combination of both.
+
+We wanted to see if only experimental structures would be enough. The variety, heterogeneity, and noise present in experimental structures makes training autoencoders difficult with this relatively small amount of data. The success that came from this was that we were able to derive a VGAE model that minutely improved the work done by Nguyen \& Hy (Table \ref{tab:VGAE_results}).
 
 \section{Conclusions and Future Work}
-Briefly summarize the key findings your paper and point out interesting directions for future inquiry.
+This paper highlights the issues that may be involved with training downstream models on generated data from other networks.
+
+Our graph model performed remarkably well, and outperformed the previous graph model when compared on the same data. This reinforces the importance for computational approaches in biomedical research to be grounded in biophysical and biochemical principles. 
+
+An evaluation that would be valuable would be to compare across all of our evaluations to see how the original project architecture and pipeline performed using only peer-reviewed experimental protein structures. Another way to further evaluate would be to explore datasets similar in size on both proposed methodologies. This would uncover the impact of training on more peer-reviewed protein structure data or the performance of less predicted protein structures from AlphaFold. 
+
+Comparing both models to more downstream tasks would also improve the verification of the embeddings for both. As well handling non-standard amino acids would've allowed us to process 33\% more data. These sorts of autoencoding models also open up the possibility to see how they perform predicting other modalities from inputs in one modality. This turns just the simple autoencoder to somewhat of a prediction tool as well. Further hyperparameter tuning would also be necessary to fully take advantage of all this sort of model has to provide.
+
+Finally, using an encoding scheme for graphs, sequence, and structure that allows them not truncated or padded would allow for more data to remain going into the model and would accurately represent a protein in multiple modalities instead of losing more information going into the fused embedding. This would probably improve the performance of both Nguyen \& Hy as well as our derived model.
+
+\section{Github}
+
+All code can be found \hyperlink{https://github.com/kalxed/multimodal-protein-ae}{here on Github}.
 
 \bibliography{paper}
 \bibliographystyle{cs541}
